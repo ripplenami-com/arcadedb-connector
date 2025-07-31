@@ -421,7 +421,7 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        sql = "SELECT max(version) as lastversion  FROM versions WHERE classname == '{}' and bucket = '{}'".format(
+        sql = "SELECT max(version) as lastversion  FROM versions WHERE classname == '{}' and `bucket` = '{}'".format(
                 classname, bucket
             )
         

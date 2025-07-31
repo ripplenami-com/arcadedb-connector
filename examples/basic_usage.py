@@ -16,18 +16,18 @@ def main():
     try:
         # Option 1: Create config from environment variables
         # Make sure you have a .env file with your settings
-        config = ArcadeDBConfig.from_env()
+        # config = ArcadeDBConfig.from_env()
         
         # Option 2: Create config manually
-        # config = ArcadeDBConfig(
-        #     host="localhost",
-        #     port=2480,
-        #     database="your_database",
-        #     username="your_username",
-        #     password="your_password",
-        #     use_ssl=False,
-        #     timeout=30
-        # )
+        config = ArcadeDBConfig(
+             host="10.1.80.29",
+             port=2480,
+             database="rtcs_db",
+             username="root",
+             password="jA0idSzh14b2",
+             use_ssl=False,
+             timeout=30
+        )
         
         print(f"Configuration loaded: {config.to_dict()}")
         

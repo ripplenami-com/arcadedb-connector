@@ -441,6 +441,46 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
         
+    def get_latest_table_name(self, name, bucket=None):
+        #name is in the form bucket # table # version
+        if not self._authenticated:
+            self.authenticate()
+
+        if name.find("#")>=0:
+            elements = name.split("#")
+            if len(elements) ==3:
+                bucket = elements[0]
+                name = elements[1]
+                # version= int(elements[2])
+        else:
+            return name
+        
+        
+        sql = (
+                "select `bucket`, "
+                "    `classname`, "
+                "    max(`version`) as `version` "
+                "from `versions` "
+                "where `classname` = '{}' and `bucket`= '{}' "
+            ).format(name, bucket)
+        
+        payload = {
+            "command": sql,
+            "language": "sql"
+        }
+
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            result = response.json()
+            if 'result' in result and len(result['result']) > 0:
+                latest = result['result'][0]
+                return f"{latest['bucket']} #{latest['classname']} #{latest['version']}"
+            else:
+                return f"{bucket} #{name} #0"
+        except Exception as e:
+            error_msg = f"Failed to get latest table name: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
 
     def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:
         """

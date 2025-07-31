@@ -433,15 +433,15 @@ class ArcadeDBClient:
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()
-            self.logger.debug("Updated successfully in schema %s", classname)
-            return lastVersion, False
+            lastVersion = result.get('result', [{}])[0].get('lastversion', 0)
+            return lastVersion, lastVersion > 0
 
         except Exception as e:
             error_msg = f"Failed to update counter: {str(e)}"
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
         
-        
+
     def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:
         """
         count_values_schema Count the number or records in the schema received as parameter

@@ -401,6 +401,54 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
     
+    def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:
+        """
+        count_values_schema Count the number or records in the schema received as parameter
+
+        :param schema_name: name of the schema in the DB
+        :type schema_name: string
+
+        :return: Number of records in the table
+        :rtype: integer
+        """
+
+        if not self._authenticated:
+            self.authenticate()
+
+        if customer_type_id == None:
+            if is_not_null == None:
+                limitQuery = "SELECT COUNT(*) AS counting from `{}`".format(schema_name)
+            else:
+                limitQuery = (
+                    "SELECT COUNT(*) AS counting from `{}` WHERE {} IS NOT NULL".format(
+                        schema_name, is_not_null
+                    )
+                )
+        else:
+            if is_not_null == None:
+                limitQuery = "SELECT COUNT(*) AS counting from `{}` where CustomerTypeId = {} ".format(
+                    schema_name, customer_type_id
+                )
+            else:
+                limitQuery = "SELECT COUNT(*) AS counting from `{}` where CustomerTypeId = {} and {} IS NOT NULL ".format(
+                    schema_name, customer_type_id, is_not_null
+                )
+
+        payload = {
+            "command": limitQuery,
+            "language": "sql"
+        }
+
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            result = response.json()
+            return result['result'][0]['counting']
+
+        except Exception as e:
+            error_msg = f"Failed to list classes: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+        
     def close(self) -> None:
         """Close the client session."""
         if self.session:

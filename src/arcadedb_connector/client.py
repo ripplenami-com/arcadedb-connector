@@ -477,6 +477,39 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
         
+    def save_version(self, classname, timestamp, version, bucket):
+        """
+        Saves the table name bucket and timestamp of the table in the versions table
+        :params classname: name of the table to be stored in versions table.
+        :params timestamp: (string) a timestamp string with the date of last modification of the file.
+        :params version: number of version of the table
+        :params bucket: name of the bucket and MDA where the tables comes from
+
+
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        sql = 'INSERT INTO versions set  classname = "{}", timestamp = "{}", version = {}, bucket = "{}" '.format(
+                classname, timestamp, version, bucket
+            )
+
+        payload = {
+            "command": sql,
+            "language": "sql"
+        }
+
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            result = response.json()
+            self.logger.debug("Updated successfully in schema %s", classname)
+            return result
+
+        except Exception as e:
+            error_msg = f"Failed to update counter: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+        
     def close(self) -> None:
         """Close the client session."""
         if self.session:

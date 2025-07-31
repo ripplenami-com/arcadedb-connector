@@ -329,7 +329,7 @@ class ArcadeDBClient:
             ArcadeDBError: If request fails
         """
         try:
-            response = self._make_request('GET', 'server', authenticate=False)
+            response = self._make_request('GET', 'server', authenticate=self._authenticated)
             result = response.json()
             self.logger.debug("Server info retrieved successfully")
             return result

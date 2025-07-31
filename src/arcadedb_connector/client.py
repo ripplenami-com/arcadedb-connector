@@ -440,6 +440,8 @@ class ArcadeDBClient:
             error_msg = f"Failed to update counter: {str(e)}"
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
+        
+        
     def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:
         """
         count_values_schema Count the number or records in the schema received as parameter

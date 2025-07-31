@@ -378,9 +378,14 @@ class ArcadeDBClient:
         """
         if not self._authenticated:
             self.authenticate()
+
+        payload = {
+            "command": "SELECT FROM schema:types",
+            "language": "sql"
+        }
         
         try:
-            response = self._make_request('GET', f'classes/{self.config.database}')
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()
             
             if isinstance(result, dict) and 'result' in result:

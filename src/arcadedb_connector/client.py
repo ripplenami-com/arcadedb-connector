@@ -401,6 +401,45 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
     
+    def get_next_version(self, classname, timestamp, bucket):
+        """
+        get_next_version Based on the given parameters, detects if a new version is necessary. Reads the `versions` table,
+        if a record for the classname with the specific timestam exist, it's not necessary to create a new version.
+
+        :param classname: Name of the class schema (table)
+        :type classname: string
+        :param timestamp: timestamp of the last change of the file, based on the operating system.
+        :type timestamp: string
+        :param bucket: name of the source database from UTACS: URA, KCCA, ...
+        :type bucket: string
+        :return: returns a new version and True (meaning that a new version of the file exists),
+        or the last version if the file has been uploaded (and false).
+        :rtype: [integer, Boolean]
+        """
+
+        lastVersion = 0
+        if not self._authenticated:
+            self.authenticate()
+
+        sql = "SELECT max(version) as lastversion  FROM versions WHERE classname == '{}' and bucket = '{}'".format(
+                classname, bucket
+            )
+        
+        payload = {
+            "command": sql,
+            "language": "sql"
+        }
+
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            result = response.json()
+            self.logger.debug("Updated successfully in schema %s", classname)
+            return lastVersion, False
+
+        except Exception as e:
+            error_msg = f"Failed to update counter: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
     def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:
         """
         count_values_schema Count the number or records in the schema received as parameter

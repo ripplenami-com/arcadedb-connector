@@ -354,7 +354,7 @@ class ArcadeDBClient:
             result = response.json()
             
             if isinstance(result, dict) and 'result' in result:
-                databases = [db['name'] for db in result['result']]
+                databases = result['result']
             else:
                 databases = []
             

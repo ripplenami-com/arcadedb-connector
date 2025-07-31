@@ -95,7 +95,7 @@ with ArcadeDBClient(config) as client:
 | `ARCADEDB_DATABASE`    | ✅       | -           | Database name               |
 | `ARCADEDB_USERNAME`    | ✅       | -           | Username for authentication |
 | `ARCADEDB_PASSWORD`    | ✅       | -           | Password for authentication |
-| `ARCADEDB_HOST`        | ❌       | `localhost` | ArcadeDB server host        |
+| `ARCADEDB_HOST`        | ✅       | `localhost` | ArcadeDB server host        |
 | `ARCADEDB_PORT`        | ❌       | `2480`      | ArcadeDB server port        |
 | `ARCADEDB_USE_SSL`     | ❌       | `false`     | Use HTTPS/SSL               |
 | `ARCADEDB_TIMEOUT`     | ❌       | `30`        | Request timeout in seconds  |

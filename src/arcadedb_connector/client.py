@@ -43,6 +43,7 @@ class ArcadeDBClient:
             "Initialized ArcadeDB client for %s:%s/%s",
             config.host, config.port, config.database
         )
+        self.connect()
     
     def _setup_logger(self) -> logging.Logger:
         """Set up logging for the client."""
@@ -188,7 +189,7 @@ class ArcadeDBClient:
             ArcadeDBAuthenticationError: If authentication fails
         """
         try:
-            response = self._make_request('GET', f'databases/{self.config.database}')
+            response = self._make_request('GET', f'/exists/{self.config.database}')
             self._authenticated = True
             self.logger.info("Successfully authenticated with ArcadeDB")
             return True

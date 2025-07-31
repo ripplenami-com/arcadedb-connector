@@ -34,14 +34,10 @@ def main():
         # Use client as context manager for automatic cleanup
         with ArcadeDBClient(config) as client:
             
-            # Test connection
-            print("Testing connection...")
-            client.connect()
-            
             # Authenticate
             print("Authenticating...")
-            client.authenticate()
-            
+            #client.authenticate()
+            return
             # Get server info
             print("Getting server info...")
             server_info = client.get_server_info()

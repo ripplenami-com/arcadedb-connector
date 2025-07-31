@@ -365,6 +365,36 @@ class ArcadeDBClient:
             error_msg = f"Failed to list databases: {str(e)}"
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
+        
+    def list_classes(self) -> List[str]:
+        """
+        List available classes (buckets/types) in the current database.
+        
+        Returns:
+            List of class names
+            
+        Raises:
+            ArcadeDBError: If request fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+        
+        try:
+            response = self._make_request('GET', f'classes/{self.config.database}')
+            result = response.json()
+            
+            if isinstance(result, dict) and 'result' in result:
+                classes = [cls['name'] for cls in result['result']]
+            else:
+                classes = []
+            
+            self.logger.debug("Retrieved %d classes", len(classes))
+            return classes
+            
+        except Exception as e:
+            error_msg = f"Failed to list classes: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
     
     def close(self) -> None:
         """Close the client session."""

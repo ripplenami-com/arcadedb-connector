@@ -449,6 +449,34 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
         
+    def update_counter(self, schema, field_name, value):
+        """
+        Update a counter field in the specified schema.
+        
+        Args:
+            schema: Name of the schema
+            field_name: Field to update
+            value: Value to set
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        payload = {
+            "command": f"UPDATE `{schema}` SET {field_name} = {value}",
+            "language": "sql"
+        }
+
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            result = response.json()
+            self.logger.debug("Counter updated successfully in schema %s", schema)
+            return result
+            
+        except Exception as e:
+            error_msg = f"Failed to update counter: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+        
     def close(self) -> None:
         """Close the client session."""
         if self.session:

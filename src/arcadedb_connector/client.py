@@ -458,11 +458,11 @@ class ArcadeDBClient:
         
         
         sql = (
-                "select `bucket`, "
-                "    `classname`, "
-                "    max(`version`) as `version` "
-                "from `versions` "
-                "where `classname` = '{}' and `bucket`= '{}' "
+                "select `bucket` as b, "
+                "classname, "
+                "max(`version`) as version "
+                "from versions "
+                "where classname = '{}' and `bucket`= '{}' "
             ).format(name, bucket)
         
         payload = {
@@ -475,9 +475,9 @@ class ArcadeDBClient:
             result = response.json()
             if 'result' in result and len(result['result']) > 0:
                 latest = result['result'][0]
-                return f"{latest['bucket']} #{latest['classname']} #{latest['version']}"
+                return f"{latest['b']}#{latest['classname']}#{latest['version']}"
             else:
-                return f"{bucket} #{name} #0"
+                return f"{bucket}#{name}#0"
         except Exception as e:
             error_msg = f"Failed to get latest table name: {str(e)}"
             self.logger.error(error_msg)
@@ -551,7 +551,7 @@ class ArcadeDBClient:
             raise ArcadeDBError(error_msg)   
 
 
-    def read_data(
+    def read_data_(
         self,
         schema_name,
         fields=None,
@@ -637,6 +637,104 @@ class ArcadeDBClient:
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)
             
+    def read_data(
+        self,
+        schema_name,
+        fields=None,
+        customer_type_id=None,
+        is_not_null=None,
+        versioning=True
+    ):
+        """
+        read_data read a schema from ArcadeDB. The array of fields to read is received in
+        the fields parameter. rid is always added as a parameter to be read.
+
+        :param schema_name: Name of the schema
+        :type schema_name: string
+        :param fields: Array of json objects with the names of the fields to read
+        :type fields: Array of JSON objects
+        """
+
+        if not self._authenticated:
+            self.authenticate()
+
+        if versioning:
+            schema_name = self.get_latest_table_name(schema_name)
+
+        #schema_name = f"{schema_name}"
+
+        self.logger.debug("reading table %s", schema_name)
+        numRows = self.count_values_schema(schema_name, customer_type_id, is_not_null)
+        print("number of rows = {}".format(numRows))
+        self.logger.debug("numRows =  {} ".format(numRows))
+
+        if numRows == 0:
+            self.logger.warning("No records found in schema %s", schema_name)
+            return []
+
+        if fields is None:
+            fields = ["*"]
+        else:
+            fields = [f"`{field}`" for field in fields]
+
+        query = f"SELECT {', '.join(fields)} FROM {schema_name}"
+
+        if customer_type_id is not None:
+            query += f" WHERE CustomerTypeId = {customer_type_id}"
+
+        if is_not_null is not None:
+            query += f" AND {is_not_null} IS NOT NULL"
+
+        payload = {
+            "command": query,
+            "language": "sql"
+        }
+        print(query)
+        self.logger.debug("Executing query: %s", query)
+
+        skip = 0
+        limit = PAGE_SIZE if PAGE_SIZE > 0 else numRows
+
+        result = []
+        while skip < numRows:
+            payload['command'] = query
+            if skip > 0:
+                payload['command'] += f" SKIP {skip}"
+            if limit > 0:
+                payload['command'] += f" LIMIT {limit}"
+
+            self.logger.debug("Query with pagination: %s", payload['command'])
+
+            try:
+                response = self._make_request('POST', f'command/{self.config.database}', payload)
+                data = response.json()
+                if 'result' in data:
+                    result.extend(data['result'])
+                    if skip == 0:
+                        print("First page of results: ", data['result'])
+                        # create a dataframe for the first records
+                        result = pd.DataFrame(data['result'])
+                        print("DataFrame created for first page of results:")
+                    else:
+                        print("Subsequent page of results: ", data['result'])
+                        # append to the existing dataframe
+                        result = pd.concat([result, pd.DataFrame(data['result'])], ignore_index=True)
+
+                else:
+                    self.logger.warning("No results found for query: %s", payload['command'])
+                    break
+                
+                skip += limit
+                if len(data['result']) < limit:
+                    break
+
+            except Exception as e:
+                error_msg = f"Failed to read data from schema {schema_name}: {str(e)}"
+                self.logger.error(error_msg)
+                raise ArcadeDBError(error_msg)
+
+        print(result)
+
 
     def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:
         """

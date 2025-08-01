@@ -647,6 +647,14 @@ class ArcadeDBClient:
                 raise ArcadeDBError(error_msg)
 
         print(result)
+            # drop the @rid, @type @cat  fields if it exists
+        if '@rid' in result.columns:
+            result = result.drop(columns=['@rid'])
+        if '@type' in result.columns:
+            result = result.drop(columns=['@type'])
+        if '@cat' in result.columns:
+            result = result.drop(columns=['@cat'])
+        return result
 
 
     def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:

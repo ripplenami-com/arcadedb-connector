@@ -20,11 +20,11 @@ def main():
         
         # Option 2: Create config manually
         config = ArcadeDBConfig(
-             host="10.1.80.29",
+             host="localhost",
              port=2480,
-             database="rtcs_db",
+             database="db",
              username="root",
-             password="jA0idSzh14b2",
+             password="password",
              use_ssl=False,
              timeout=30
         )

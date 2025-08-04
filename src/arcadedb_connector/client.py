@@ -4,16 +4,19 @@ Main ArcadeDB client implementation.
 
 import json
 import logging
+import os
 import time
 from typing import Dict, Any, Optional, List, Union
 from urllib.parse import urljoin
 
 import requests
+import pandas as pd
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .config import ArcadeDBConfig
-from .constants import PAGE_SIZE
+from .utils import read_file_content, format_columns
+from .constants import PAGE_SIZE, BATCH_SIZE
 from .exceptions import (
     ArcadeDBError,
     ArcadeDBConnectionError,
@@ -248,77 +251,6 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBQueryError(error_msg)
     
-    def create_document(
-        self,
-        bucket_name: str,
-        document: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Create a new document in specified bucket.
-        
-        Args:
-            bucket_name: Name of the bucket/type
-            document: Document data
-            
-        Returns:
-            Created document with metadata
-            
-        Raises:
-            ArcadeDBError: If document creation fails
-        """
-        if not self._authenticated:
-            self.authenticate()
-        
-        try:
-            response = self._make_request(
-                'POST',
-                f'document/{self.config.database}',
-                data={
-                    '@type': bucket_name,
-                    **document
-                }
-            )
-            
-            result = response.json()
-            self.logger.debug("Document created successfully in bucket %s", bucket_name)
-            return result
-            
-        except Exception as e:
-            error_msg = f"Document creation failed: {str(e)}"
-            self.logger.error(error_msg)
-            raise ArcadeDBError(error_msg)
-    
-    def get_document(self, rid: str) -> Dict[str, Any]:
-        """
-        Retrieve document by RID.
-        
-        Args:
-            rid: Record ID
-            
-        Returns:
-            Document data
-            
-        Raises:
-            ArcadeDBError: If document retrieval fails
-        """
-        if not self._authenticated:
-            self.authenticate()
-        
-        try:
-            response = self._make_request(
-                'GET',
-                f'document/{self.config.database}/{rid}'
-            )
-            
-            result = response.json()
-            self.logger.debug("Document retrieved successfully: %s", rid)
-            return result
-            
-        except Exception as e:
-            error_msg = f"Document retrieval failed: {str(e)}"
-            self.logger.error(error_msg)
-            raise ArcadeDBError(error_msg)
-    
     def get_server_info(self) -> Dict[str, Any]:
         """
         Get ArcadeDB server information.
@@ -516,7 +448,7 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
 
-    def create_property(self, schema_name, field_name, field_type="STRING"):
+    def create_property(self, schema_name: str, field_name: str, field_type: str = "STRING"):
         """
         Create a new property (field) in the specified schema.
         
@@ -578,7 +510,6 @@ class ArcadeDBClient:
 
         self.logger.debug("reading table %s", schema_name)
         numRows = self.count_values_schema(schema_name, customer_type_id, is_not_null)
-        print("number of rows = {}".format(numRows))
         self.logger.debug("numRows =  {} ".format(numRows))
 
         if numRows == 0:
@@ -602,7 +533,6 @@ class ArcadeDBClient:
             "command": query,
             "language": "sql"
         }
-        print(query)
         self.logger.debug("Executing query: %s", query)
 
         skip = 0
@@ -656,6 +586,181 @@ class ArcadeDBClient:
             result = result.drop(columns=['@cat'])
         return result
 
+    def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None):
+        if not self._authenticated:
+            self.authenticate()
+
+        table_name = self.get_latest_table_name(schema_name)
+
+        if table_name is None:
+            raise ArcadeDBError(f"Table {schema_name} does not exist in the database.")
+        
+        if table_name.find("#") <= 0:
+            self.drop_schema(table_name)
+            print("Table {} dropped to be recreated.".format(table_name))
+
+        self.create_schema(table_name)
+
+        if isinstance(columns, str):
+            json_file = read_file_content(columns)
+            columns = json.loads(json_file)
+        elif isinstance(columns, list):
+            # check the first element of the list has a keys (name, type, index)
+            if not all(key in columns[0] for key in ['name', 'type', 'index']):
+                raise ArcadeDBError("Invalid columns format. Each column must have 'name', 'type', and 'index' keys.")
+        elif columns is None:
+            raise ArcadeDBError("Columns parameter must be provided as a JSON file or a list of dictionaries.")
+        
+        else:
+            raise ArcadeDBError("Invalid columns format. Must be a JSON file or a list of dictionaries.")
+        
+        # Create properties for each column
+        for column in columns:
+            field_name = column['name']
+            field_type = column.get('type', 'STRING')
+            self.create_property(table_name, field_name, field_type)
+
+        if data.empty:
+            self.logger.warning("DataFrame is empty. No records to insert.")
+            return
+        
+        self.logger.info("Inserting %d records into schema %s", len(data), table_name)
+        self.insert_data(table_name, data, columns)
+
+    def insert_data(self, schema_name: str, data: pd.DataFrame, columns:list):
+        """
+        Insert data into the specified schema.
+        
+        Args:
+            schema_name: Name of the schema to insert data into
+            data: DataFrame containing data to insert
+            
+        Raises:
+            ArcadeDBError: If insertion fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        if data.empty:
+            self.logger.warning("DataFrame is empty. No records to insert.")
+            return
+
+        self.begin_transaction()
+        self.logger.debug("Transaction started")
+
+        # total number of records to insert
+        total_records = data.shape[0]
+        self.logger.info("Inserting %d records into schema %s", total_records, schema_name)
+
+        formatted_columns = format_columns(columns)
+
+        for i in range(0, total_records, BATCH_SIZE):
+            batch = data.iloc[i:i + BATCH_SIZE]
+            # Use a single INSERT with multiple values for efficiency
+            values = [
+                '(' + ', '.join(
+                    f'"{r[col]}"' if isinstance(r[col], str) else str(r[col])
+                    for col in formatted_columns
+                ) + ')'
+            for r in batch
+            ]
+
+            SQL_STATEMENT = f'INSERT INTO `{schema_name}` ({", ".join(formatted_columns)}) VALUES {", ".join(values)}'
+
+            payload = {
+                "type": "cmd",
+                "language": "sql",
+                "command": SQL_STATEMENT,
+                "serializer": "record"
+            }
+            
+            try:
+                response = self._make_request('POST', f'command/{self.config.database}', payload)
+                if response.status_code == 200:
+                    result = response.json()
+                    if 'result' in result:
+                        self.logger.debug("Inserted %d records into schema %s successfully", len(batch), schema_name)
+                    else:
+                        self.logger.warning("No result returned for batch insert into schema %s", schema_name)
+            except Exception as e:
+                error_msg = f"Failed to insert records into schema {schema_name}: {str(e)}"
+                self.logger.error(error_msg)
+                self.rollback_transaction()
+                raise ArcadeDBError(error_msg)
+
+    def begin_transaction(self):
+        """
+        Begin a transaction in ArcadeDB.
+        
+        Returns:
+            Transaction ID
+            
+        Raises:
+            ArcadeDBError: If transaction initiation fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        try:
+            response = self._make_request('POST', f'/begin/{self.config.database}')
+            session_id = response.headers.get("arcadedb-session-id")
+
+            if response.status_code != 200 or not session_id:
+                error_msg = "Failed to begin transaction: No session ID returned"
+                self.logger.error(error_msg)
+                raise ArcadeDBError(error_msg)
+            self.session.headers.update({
+                "arcadedb-session-id": session_id
+            })
+            self.logger.debug("Transaction started successfully")
+
+        except Exception as e:
+            error_msg = f"Failed to begin transaction: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+        
+    def commit_transaction(self):
+        """
+        Commit the current transaction in ArcadeDB.
+        
+        Raises:
+            ArcadeDBError: If transaction commit fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        try:
+            response = self._make_request('POST', f'/commit/{self.config.database}')
+            result = response.json()
+            self.logger.debug("Transaction committed successfully")
+            return result
+            
+        except Exception as e:
+            error_msg = f"Failed to commit transaction: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+        
+    def rollback_transaction(self):
+        """
+        Rollback the current transaction in ArcadeDB.
+        
+        Raises:
+            ArcadeDBError: If transaction rollback fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        try:
+            response = self._make_request('POST', f'/rollback/{self.config.database}')
+            result = response.json()
+            self.logger.debug("Transaction rolled back successfully")
+            return result
+            
+        except Exception as e:
+            error_msg = f"Failed to rollback transaction: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+        
 
     def count_values_schema(self, schema_name, customer_type_id=None, is_not_null=None) -> int:
         """
@@ -704,7 +809,39 @@ class ArcadeDBClient:
             error_msg = f"Failed to list classes: {str(e)}"
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
+    
+    def drop_schema(self, schema_name):
+        """
+        Drop a schema (class) from the database.
         
+        Args:
+            schema_name: Name of the schema to drop
+            
+        Returns:
+            Result of the schema drop operation
+            
+        Raises:
+            ArcadeDBError: If schema drop fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        payload = {
+            "command": f"DROP TYPE `{schema_name}` IF EXISTS",
+            "language": "sql"
+        }
+
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            result = response.json()
+            self.logger.debug("Schema %s dropped successfully", schema_name)
+            return result
+            
+        except Exception as e:
+            error_msg = f"Failed to drop schema {schema_name}: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+
     def update_counter(self, schema, field_name, value):
         """
         Update a counter field in the specified schema.

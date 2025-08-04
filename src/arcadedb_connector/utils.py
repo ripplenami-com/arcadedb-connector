@@ -3,7 +3,8 @@ Utility functions for ArcadeDB Connector.
 """
 
 import re
-from typing import Dict, Any, Optional, Union
+import os
+from typing import Dict, Any, List
 from datetime import datetime
 
 
@@ -118,3 +119,41 @@ def parse_error_response(response_data: Dict[str, Any]) -> str:
     
     # Fallback to string representation
     return str(response_data)
+
+def read_file_content(file_path: str) -> str:
+    """
+    Read the content of a file.
+    
+    Args:
+        file_path: Path to the file
+        
+    Returns:
+        Content of the file as a string
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"JSON File With columns is not found: {file_path}")
+    
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return file.read()
+    
+
+def format_columns(columns: List[Dict[str, Any]]) -> List[str]:
+    """
+    Format columns for ArcadeDB insert operation.
+    
+    Args:
+        columns: List of column definitions
+        
+    Returns:
+        List of formatted column names
+    """
+    formatted_columns = []
+    
+    for col in columns:
+        if 'name' in col:
+            name = sanitize_identifier(col['name'])
+            formatted_columns.append(name)
+        else:
+            raise ValueError("Column definition must contain 'name' key")
+    
+    return formatted_columns

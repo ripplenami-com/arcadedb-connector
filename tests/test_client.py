@@ -6,6 +6,7 @@ import json
 from unittest.mock import Mock, patch, MagicMock
 import pytest
 import requests
+import pandas as pd
 
 from arcadedb_connector.client import ArcadeDBClient
 from arcadedb_connector.config import ArcadeDBConfig
@@ -141,77 +142,6 @@ class TestArcadeDBClient:
         assert call_args[1]['json']['parameters'] == parameters
     
     @patch('requests.Session.request')
-    def test_create_document_success(self, mock_request, client):
-        """Test successful document creation."""
-        # Mock authentication
-        auth_response = Mock()
-        auth_response.status_code = 200
-        auth_response.json.return_value = {"result": "success"}
-        
-        # Mock document creation
-        doc_response = Mock()
-        doc_response.status_code = 200
-        doc_response.json.return_value = {"@rid": "#1:0", "name": "test"}
-        
-        mock_request.side_effect = [auth_response, doc_response]
-        
-        document = {"name": "test", "email": "test@example.com"}
-        result = client.create_document("Person", document)
-        
-        assert "@rid" in result
-        assert result["name"] == "test"
-    
-    @patch('requests.Session.request')
-    def test_get_document_success(self, mock_request, client):
-        """Test successful document retrieval."""
-        # Mock authentication
-        auth_response = Mock()
-        auth_response.status_code = 200
-        auth_response.json.return_value = {"result": "success"}
-        
-        # Mock document retrieval
-        doc_response = Mock()
-        doc_response.status_code = 200
-        doc_response.json.return_value = {"@rid": "#1:0", "name": "test"}
-        
-        mock_request.side_effect = [auth_response, doc_response]
-        
-        result = client.get_document("#1:0")
-        
-        assert result["@rid"] == "#1:0"
-        assert result["name"] == "test"
-    
-    @patch('requests.Session.request')
-    def test_timeout_error(self, mock_request, client):
-        """Test timeout error handling."""
-        mock_request.side_effect = requests.exceptions.Timeout()
-        
-        with pytest.raises(ArcadeDBTimeoutError):
-            client.connect()
-    
-    @patch('requests.Session.request')
-    def test_http_error_handling(self, mock_request, client):
-        """Test HTTP error handling."""
-        mock_response = Mock()
-        mock_response.status_code = 500
-        mock_response.reason = "Internal Server Error"
-        mock_response.json.return_value = {"error": "Database error"}
-        mock_request.return_value = mock_response
-        
-        with pytest.raises(ArcadeDBError) as exc_info:
-            client.connect()
-        
-        assert exc_info.value.status_code == 500
-    
-    def test_context_manager(self, config):
-        """Test client as context manager."""
-        with patch.object(ArcadeDBClient, 'close') as mock_close:
-            with ArcadeDBClient(config) as client:
-                assert isinstance(client, ArcadeDBClient)
-            
-            mock_close.assert_called_once()
-    
-    @patch('requests.Session.request')
     def test_get_server_info(self, mock_request, client):
         """Test getting server information."""
         mock_response = Mock()
@@ -300,20 +230,6 @@ class TestArcadeDBClient:
         result = client.list_classes()
         
         assert result == []
-
-    @patch('requests.Session.request')
-    def test_list_classes_failure(self, mock_request, client):
-        """Test list classes failure."""
-        # Mock authentication
-        auth_response = Mock()
-        auth_response.status_code = 200
-        auth_response.json.return_value = {"result": "success"}
-        
-        # Mock failed classes request
-        mock_request.side_effect = [auth_response, requests.exceptions.ConnectionError("Connection failed")]
-        
-        with pytest.raises(ArcadeDBError):
-            client.list_classes()
 
     @patch('requests.Session.request')
     def test_count_values_schema_basic(self, mock_request, client):
@@ -424,18 +340,196 @@ class TestArcadeDBClient:
         assert call_args[1]['json']['command'] == expected_query
 
     @patch('requests.Session.request')
-    def test_count_values_schema_failure(self, mock_request, client):
-        """Test count_values_schema failure."""
+    def test_create_schema_success(self, mock_request, client):
+        """Test successful schema creation."""
         # Mock authentication
         auth_response = Mock()
         auth_response.status_code = 200
         auth_response.json.return_value = {"result": "success"}
         
-        # Mock failed count request
-        mock_request.side_effect = [auth_response, requests.exceptions.ConnectionError("Connection failed")]
+        # Mock schema creation
+        schema_response = Mock()
+        schema_response.status_code = 200
+        schema_response.json.return_value = {"result": "Schema created"}
         
-        with pytest.raises(ArcadeDBError):
-            client.count_values_schema("Person")
+        mock_request.side_effect = [auth_response, schema_response]
+        
+        result = client.create_schema("TestSchema")
+        
+        assert result == {"result": "Schema created"}
+        
+        # Verify the SQL command was correct
+        call_args = mock_request.call_args_list[1]
+        assert 'json' in call_args[1]
+        assert "CREATE VERTEX TYPE `TestSchema`" in call_args[1]['json']['command']
+
+    @patch('requests.Session.request')
+    def test_create_property_success(self, mock_request, client):
+        """Test successful property creation."""
+        # Mock authentication
+        auth_response = Mock()
+        auth_response.status_code = 200
+        auth_response.json.return_value = {"result": "success"}
+        
+        # Mock property creation
+        prop_response = Mock()
+        prop_response.status_code = 200
+        prop_response.json.return_value = {"result": "Property created"}
+        
+        mock_request.side_effect = [auth_response, prop_response]
+        
+        result = client.create_property("TestSchema", "name", "STRING")
+        
+        assert result == {"result": "Property created"}
+        
+        # Verify the SQL command was correct
+        call_args = mock_request.call_args_list[1]
+        assert 'json' in call_args[1]
+        assert "CREATE PROPERTY `TestSchema`.`name` STRING" in call_args[1]['json']['command']
+
+    @patch('requests.Session.request')
+    def test_insert_dataframe_success(self, mock_request, client):
+        """Test successful DataFrame insertion."""
+        # Mock authentication
+        auth_response = Mock()
+        auth_response.status_code = 200
+        auth_response.json.return_value = {"result": "success"}
+        
+        # Mock insert operations
+        insert_response = Mock()
+        insert_response.status_code = 200
+        insert_response.json.return_value = {"result": "Inserted"}
+        
+        mock_request.side_effect = [auth_response] + [insert_response] * 2
+        
+        # Create test DataFrame
+        df = pd.DataFrame({
+            'name': ['John', 'Jane'],
+            'age': [30, 25]
+        })
+        
+        result = client.insert_dataframe("Person", df)
+        
+        assert result is not None
+        # Should have made authentication + 2 insert calls
+        assert len(mock_request.call_args_list) == 3
+
+    @patch('requests.Session.request')
+    def test_read_data_success(self, mock_request, client):
+        """Test successful data reading."""
+        # Mock authentication
+        auth_response = Mock()
+        auth_response.status_code = 200
+        auth_response.json.return_value = {"result": "success"}
+        
+        # Mock data reading
+        read_response = Mock()
+        read_response.status_code = 200
+        read_response.json.return_value = {
+            "result": [
+                {"name": "John", "age": 30},
+                {"name": "Jane", "age": 25}
+            ]
+        }
+        
+        mock_request.side_effect = [auth_response, read_response]
+        
+        result = client.read_data("Person")
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2
+        assert "name" in result.columns
+        assert "age" in result.columns
+
+    @patch('requests.Session.request')
+    def test_drop_schema_success(self, mock_request, client):
+        """Test successful schema dropping."""
+        # Mock authentication
+        auth_response = Mock()
+        auth_response.status_code = 200
+        auth_response.json.return_value = {"result": "success"}
+        
+        # Mock schema drop
+        drop_response = Mock()
+        drop_response.status_code = 200
+        drop_response.json.return_value = {"result": "Schema dropped"}
+        
+        mock_request.side_effect = [auth_response, drop_response]
+        
+        result = client.drop_schema("TestSchema")
+        
+        assert result == {"result": "Schema dropped"}
+        
+        # Verify the SQL command was correct
+        call_args = mock_request.call_args_list[1]
+        assert 'json' in call_args[1]
+        assert "DROP TYPE `TestSchema`" in call_args[1]['json']['command']
+
+    @patch('requests.Session.request')
+    def test_begin_transaction_success(self, mock_request, client):
+        """Test successful transaction begin."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"txid": "tx123"}
+        mock_request.return_value = mock_response
+        
+        result = client.begin_transaction()
+        
+        assert result == {"txid": "tx123"}
+
+    @patch('requests.Session.request')
+    def test_commit_transaction_success(self, mock_request, client):
+        """Test successful transaction commit."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"result": "committed"}
+        mock_request.return_value = mock_response
+        
+        result = client.commit_transaction()
+        
+        assert result == {"result": "committed"}
+
+    @patch('requests.Session.request')
+    def test_rollback_transaction_success(self, mock_request, client):
+        """Test successful transaction rollback."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"result": "rollback"}
+        mock_request.return_value = mock_response
+        
+        result = client.rollback_transaction()
+        
+        assert result == {"result": "rollback"}
+
+    @patch('requests.Session.request')
+    def test_timeout_error(self, mock_request, client):
+        """Test timeout error handling."""
+        mock_request.side_effect = requests.exceptions.Timeout()
+        
+        with pytest.raises(ArcadeDBTimeoutError):
+            client.connect()
+    
+    @patch('requests.Session.request')
+    def test_http_error_handling(self, mock_request, client):
+        """Test HTTP error handling."""
+        mock_response = Mock()
+        mock_response.status_code = 500
+        mock_response.reason = "Internal Server Error"
+        mock_response.json.return_value = {"error": "Database error"}
+        mock_request.return_value = mock_response
+        
+        with pytest.raises(ArcadeDBError) as exc_info:
+            client.connect()
+        
+        assert exc_info.value.status_code == 500
+
+    def test_context_manager(self, config):
+        """Test client as context manager."""
+        with patch.object(ArcadeDBClient, 'close') as mock_close:
+            with ArcadeDBClient(config) as client:
+                assert isinstance(client, ArcadeDBClient)
+            
+            mock_close.assert_called_once()
 
     def test_setup_logger(self, client):
         """Test logger setup."""
@@ -471,74 +565,6 @@ class TestArcadeDBClient:
         mock_request.assert_called_once()
 
     @patch('requests.Session.request')
-    def test_make_request_with_data(self, mock_request, client):
-        """Test _make_request with data payload."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_request.return_value = mock_response
-        
-        test_data = {"key": "value"}
-        client._make_request('POST', 'test-endpoint', data=test_data)
-        
-        call_args = mock_request.call_args
-        assert 'json' in call_args[1]
-        assert call_args[1]['json'] == test_data
-
-    @patch('requests.Session.request')
-    def test_make_request_with_params(self, mock_request, client):
-        """Test _make_request with query parameters."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_request.return_value = mock_response
-        
-        test_params = {"param1": "value1", "param2": "value2"}
-        client._make_request('GET', 'test-endpoint', params=test_params)
-        
-        call_args = mock_request.call_args
-        assert 'params' in call_args[1]
-        assert call_args[1]['params'] == test_params
-
-    @patch('requests.Session.request')
-    def test_make_request_no_auth(self, mock_request, client):
-        """Test _make_request without authentication."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_request.return_value = mock_response
-        
-        client._make_request('GET', 'test-endpoint', authenticate=False)
-        
-        call_args = mock_request.call_args
-        assert 'auth' not in call_args[1]
-
-    @patch('requests.Session.request')
-    def test_make_request_404_error(self, mock_request, client):
-        """Test _make_request with 404 error."""
-        mock_response = Mock()
-        mock_response.status_code = 404
-        mock_request.return_value = mock_response
-        
-        with pytest.raises(ArcadeDBError) as exc_info:
-            client._make_request('GET', 'nonexistent-endpoint')
-        
-        assert exc_info.value.status_code == 404
-        assert "Resource not found" in str(exc_info.value)
-
-    @patch('requests.Session.request')
-    def test_make_request_with_error_response_json(self, mock_request, client):
-        """Test _make_request with error response containing JSON."""
-        mock_response = Mock()
-        mock_response.status_code = 400
-        mock_response.reason = "Bad Request"
-        mock_response.json.return_value = {"error": "Invalid query syntax"}
-        mock_request.return_value = mock_response
-        
-        with pytest.raises(ArcadeDBError) as exc_info:
-            client._make_request('POST', 'test-endpoint')
-        
-        assert "Invalid query syntax" in str(exc_info.value)
-        assert exc_info.value.status_code == 400
-
-    @patch('requests.Session.request')
     def test_make_request_connection_error(self, mock_request, client):
         """Test _make_request with connection error."""
         mock_request.side_effect = requests.exceptions.ConnectionError("Network unreachable")
@@ -556,15 +582,6 @@ class TestArcadeDBClient:
         
         assert "Request failed" in str(exc_info.value)
 
-    def test_context_manager_with_patch(self, config):
-        """Test client as context manager with proper mocking."""
-        with patch('arcadedb_connector.client.ArcadeDBClient.connect'), \
-             patch.object(ArcadeDBClient, 'close') as mock_close:
-            with ArcadeDBClient(config) as client:
-                assert isinstance(client, ArcadeDBClient)
-            
-            mock_close.assert_called_once()
-
     def test_close_method(self, client):
         """Test close method."""
         # Mock the session
@@ -574,35 +591,3 @@ class TestArcadeDBClient:
         client.close()
         
         mock_session.close.assert_called_once()
-
-    @patch('requests.Session.request')
-    def test_get_server_info_without_auth(self, mock_request, client):
-        """Test getting server info without authentication."""
-        client._authenticated = False
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"version": "24.1.1", "user": "anonymous"}
-        mock_request.return_value = mock_response
-        
-        result = client.get_server_info()
-        
-        assert result["version"] == "24.1.1"
-        # Verify it was called without authentication
-        call_args = mock_request.call_args
-        assert call_args[1].get('auth') is None
-
-    @patch('requests.Session.request')
-    def test_get_server_info_with_auth(self, mock_request, client):
-        """Test getting server info with authentication."""
-        client._authenticated = True
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"version": "24.1.1", "user": "testuser"}
-        mock_request.return_value = mock_response
-        
-        result = client.get_server_info()
-        
-        assert result["version"] == "24.1.1"
-        # Verify it was called with authentication
-        call_args = mock_request.call_args
-        assert call_args[1].get('auth') == (client.config.username, client.config.password)

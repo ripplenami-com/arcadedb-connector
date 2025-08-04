@@ -36,8 +36,7 @@ def main():
             
             # Authenticate
             print("Authenticating...")
-            #client.authenticate()
-            return
+            client.authenticate()
             # Get server info
             print("Getting server info...")
             server_info = client.get_server_info()
@@ -57,20 +56,8 @@ def main():
                 "created_at": "2025-01-01T00:00:00Z"
             }
             
-            result = client.create_document("Person", document_data)
+            result = client._make_request("POST", "/command", document_data)
             print(f"Document created: {result}")
-            
-            # Example: Execute a query
-            print("Executing a query...")
-            query_result = client.execute_query(
-                "SELECT * FROM Person WHERE age > :min_age",
-                parameters={"min_age": 25}
-            )
-            print(f"Query result: {query_result}")
-            
-            # Example: Get document by RID (if you have one)
-            # document = client.get_document("#1:0")
-            # print(f"Retrieved document: {document}")
             
     except ArcadeDBError as e:
         print(f"ArcadeDB Error: {e.message}")

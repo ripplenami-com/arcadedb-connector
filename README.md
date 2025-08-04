@@ -38,8 +38,10 @@ arcadedb-connector/
 - HTTP session handling with connection pooling
 - Authentication and session management
 - Query execution with parameter binding
-- Document CRUD operations (Create, Read, Update, Delete)
-- Bulk operations for data loading
+- Schema management (create/drop schemas, properties)
+- Data operations with pandas DataFrame integration
+- Transaction management (begin/commit/rollback)
+- Bulk data loading and reading operations
 - Comprehensive error handling and logging
 
 #### `config.py` - Configuration Management
@@ -80,10 +82,12 @@ arcadedb-connector/
 
 - Connection and authentication testing
 - Query execution tests with mocked responses
-- Document operation tests
+- Schema management operations testing
+- Data loading and reading with pandas DataFrames
+- Transaction management testing
 - Error handling and exception testing
-- Retry logic validation
-- Session management tests
+- Counting and utility function tests
+- Session management and HTTP request tests
 
 #### `test_config.py` - Configuration Tests
 
@@ -106,8 +110,10 @@ arcadedb-connector/
 
 - Configuration setup examples
 - Basic connection and authentication
-- Simple query execution
-- Document operations
+- Schema creation and property definition
+- Data insertion with pandas DataFrames
+- Query execution and data reading
+- Transaction management examples
 - Error handling patterns
 
 ## ✨ Features
@@ -116,7 +122,9 @@ arcadedb-connector/
 - 🔐 **Secure Authentication**: Built-in authentication with credential management
 - 🛡️ **Robust Error Handling**: Comprehensive exception hierarchy with detailed error information
 - 📊 **Query Execution**: Support for SQL queries with parameter binding
-- 📄 **Document Operations**: Create, read, and manage documents
+- 🏗️ **Schema Management**: Create, modify, and drop database schemas and properties
+- 📊 **Data Operations**: Read and write data using pandas DataFrames
+- 🔄 **Transaction Support**: Full transaction management (begin/commit/rollback)
 - ⚙️ **Environment Configuration**: Flexible configuration via environment variables or code
 - 🔄 **Retry Logic**: Automatic retry for transient failures
 - 📝 **Comprehensive Logging**: Detailed logging for debugging and monitoring
@@ -204,6 +212,7 @@ ARCADEDB_MAX_RETRIES=3
 
 ```python
 from arcadedb_connector import ArcadeDBClient, ArcadeDBConfig
+import pandas as pd
 
 # Option 1: Load config from environment
 config = ArcadeDBConfig.from_env()
@@ -229,15 +238,26 @@ with ArcadeDBClient(config) as client:
     result = client.execute_query("SELECT * FROM Person WHERE age > :min_age",
                                  parameters={"min_age": 25})
 
-    # Create documents
-    person = client.create_document("Person", {
-        "name": "John Doe",
-        "email": "john@example.com",
-        "age": 30
-    })
+    # Create schema
+    client.create_schema("Person")
 
-    # Get documents
-    document = client.get_document("#1:0")
+    # Create properties
+    client.create_property("Person", "name", "STRING")
+    client.create_property("Person", "age", "INTEGER")
+
+    # Insert data from DataFrame
+    df = pd.DataFrame([
+        {"name": "John Doe", "age": 30},
+        {"name": "Jane Smith", "age": 25}
+    ])
+    client.insert_dataframe("Person", df)
+
+    # Read data as DataFrame
+    data = client.read_data("Person")
+
+    # Count records
+    count = client.count_values_schema("Person")
+    print(f"Total records: {count}")
 ```
 
 ## Configuration
@@ -284,14 +304,39 @@ config = ArcadeDBConfig(
 
 #### Query Methods
 
-- `execute_query(query, parameters=None)` - Execute SQL query
-- `create_document(bucket_name, document)` - Create new document
-- `get_document(rid)` - Retrieve document by RID
+- `execute_query(query, parameters=None)` - Execute SQL query with parameter binding
+
+#### Schema Management Methods
+
+- `create_schema(schema_name, super_class="V")` - Create a new schema/type
+- `create_property(schema_name, field_name, field_type="STRING")` - Add property to schema
+- `drop_schema(schema_name)` - Drop/delete a schema
+- `list_classes()` - List all available schemas/types
+
+#### Data Operations Methods
+
+- `read_data(schema_name, limit=None, offset=None, where_conditions=None)` - Read data as pandas DataFrame
+- `insert_dataframe(schema_name, data, columns=None)` - Insert pandas DataFrame into schema
+- `insert_data(schema_name, data, columns)` - Insert data with specified columns
+- `count_values_schema(schema_name, customer_type_id=None, is_not_null=None)` - Count records in schema
+
+#### Transaction Methods
+
+- `begin_transaction()` - Start a new transaction
+- `commit_transaction()` - Commit current transaction
+- `rollback_transaction()` - Rollback current transaction
 
 #### Information Methods
 
-- `get_server_info()` - Get server information
+- `get_server_info()` - Get server information and version
 - `list_databases()` - List available databases
+
+#### Utility Methods
+
+- `get_next_version(classname, timestamp, bucket)` - Get next version for versioning
+- `get_latest_table_name(name, bucket=None)` - Get latest table name
+- `update_counter(schema, field_name, value)` - Update counter fields
+- `save_version(classname, timestamp, version, bucket)` - Save version information
 
 ### Error Handling
 
@@ -427,55 +472,100 @@ The `examples/` directory contains comprehensive usage examples:
 - **`basic_usage.py`**:
   - Configuration setup and environment loading
   - Basic connection and authentication
-  - Simple CRUD operations
-  - Error handling patterns
+  - Schema creation and property management
+  - Data insertion with pandas DataFrames
   - Query execution with parameter binding
+  - Transaction management examples
+  - Error handling patterns
 
 ### Sample Usage Patterns
 
-```python
-# Example: Bulk data loading with error handling
+````python
+# Example: Schema creation and data loading
 import pandas as pd
 from arcadedb_connector import ArcadeDBClient, ArcadeDBConfig
 from arcadedb_connector.exceptions import ArcadeDBError
 
-def load_csv_data(client: ArcadeDBClient, csv_path: str, bucket_name: str):
+def setup_database_schema(client: ArcadeDBClient):
+    """Create database schema with properties."""
+    try:
+        # Create main schema
+        client.create_schema("Customer", super_class="V")
+
+        # Add properties
+        client.create_property("Customer", "name", "STRING")
+        client.create_property("Customer", "email", "STRING")
+        client.create_property("Customer", "age", "INTEGER")
+        client.create_property("Customer", "created_at", "DATETIME")
+
+        print("Schema created successfully")
+
+    except ArcadeDBError as e:
+        print(f"Schema creation failed: {e.message}")
+
+def load_csv_data(client: ArcadeDBClient, csv_path: str, schema_name: str):
     """Load CSV data into ArcadeDB with error handling."""
     try:
         # Read CSV with pandas
         df = pd.read_csv(csv_path)
 
-        # Convert to records for bulk insert
-        records = df.to_dict('records')
+        # Insert DataFrame into ArcadeDB
+        client.insert_dataframe(schema_name, df)
+        print(f"Successfully inserted {len(df)} records")
 
-        # Bulk insert with error handling
-        results = client.bulk_insert(bucket_name, records)
-        print(f"Successfully inserted {len(results)} records")
+        # Verify insertion
+        count = client.count_values_schema(schema_name)
+        print(f"Total records in {schema_name}: {count}")
 
     except ArcadeDBError as e:
         print(f"Database error: {e.message}")
     except Exception as e:
         print(f"Unexpected error: {e}")
 
-# Example: Advanced querying with pagination
-def paginated_query(client: ArcadeDBClient, query: str, page_size: int = 1000):
-    """Execute paginated queries for large datasets."""
-    offset = 0
-    has_more = True
+# Example: Transaction management
+def batch_operations_with_transaction(client: ArcadeDBClient):
+    """Perform multiple operations within a transaction."""
+    try:
+        # Begin transaction
+        tx_result = client.begin_transaction()
+        print(f"Started transaction: {tx_result}")
 
-    while has_more:
-        paginated_query = f"{query} SKIP {offset} LIMIT {page_size}"
-        result = client.execute_query(paginated_query)
+        # Perform multiple operations
+        client.execute_query("UPDATE Customer SET status = 'active' WHERE age > 18")
+        client.execute_query("UPDATE Customer SET discount = 0.1 WHERE age > 65")
 
-        if result.get('result'):
-            yield result['result']
-            offset += page_size
-            has_more = len(result['result']) == page_size
-        else:
-            has_more = False
-```
+        # Commit transaction
+        commit_result = client.commit_transaction()
+        print(f"Transaction committed: {commit_result}")
 
-## 🤝 Contributing
+    except ArcadeDBError as e:
+        # Rollback on error
+        rollback_result = client.rollback_transaction()
+        print(f"Transaction rolled back: {rollback_result}")
+        print(f"Error: {e.message}")
+
+# Example: Advanced querying with data analysis
+def analyze_customer_data(client: ArcadeDBClient):
+    """Analyze customer data using pandas integration."""
+    try:
+        # Read data into DataFrame
+        df = client.read_data("Customer", limit=1000)
+
+        # Perform pandas operations
+        age_distribution = df['age'].describe()
+        print("Age distribution:", age_distribution)
+
+        # Execute custom queries
+        senior_customers = client.execute_query(
+            "SELECT * FROM Customer WHERE age > :min_age",
+            parameters={"min_age": 65}
+        )
+
+        print(f"Found {len(senior_customers.get('result', []))} senior customers")
+
+    except ArcadeDBError as e:
+        print(f"Analysis failed: {e.message}")
+```## 🤝 Contributing
 
 We welcome contributions! Please follow these guidelines:
 
@@ -485,7 +575,8 @@ We welcome contributions! Please follow these guidelines:
 2. **Create a feature branch** from `main`:
    ```bash
    git checkout -b feature/your-feature-name
-   ```
+````
+
 3. **Make your changes** following the project conventions
 4. **Add tests** for new functionality
 5. **Run the full test suite** and ensure all tests pass
@@ -527,10 +618,6 @@ from arcadedb_connector import (
 )
 ```
 
-## 📋 Changelog
-
-### v0.1.0 - Initial Release
-
 #### Features
 
 - ✅ Core ArcadeDB client implementation
@@ -538,12 +625,13 @@ from arcadedb_connector import (
 - ✅ Comprehensive exception hierarchy
 - ✅ HTTP session management with retry logic
 - ✅ Query execution with parameter binding
-- ✅ Document CRUD operations
-- ✅ Bulk data operations
+- ✅ Schema management (create/drop schemas and properties)
+- ✅ Data operations with pandas DataFrame integration
+- ✅ Transaction management (begin/commit/rollback)
+- ✅ Bulk data loading and reading operations
 - ✅ Environment-based configuration
 - ✅ Comprehensive test suite (>90% coverage)
 - ✅ Type annotations throughout
-- ✅ Pandas integration for data processing
 - ✅ Professional logging setup
 
 #### Technical Highlights

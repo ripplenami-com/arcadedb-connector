@@ -705,7 +705,7 @@ class ArcadeDBClient:
             response = self._make_request('POST', f'/begin/{self.config.database}')
             session_id = response.headers.get("arcadedb-session-id")
 
-            if response.status_code != 200 or not session_id:
+            if response.status_code != 204 or not session_id:
                 error_msg = "Failed to begin transaction: No session ID returned"
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)

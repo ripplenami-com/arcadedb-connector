@@ -657,16 +657,25 @@ class ArcadeDBClient:
 
         for i in range(0, total_records, BATCH_SIZE):
             batch = data.iloc[i:i + BATCH_SIZE]
-            # Use a single INSERT with multiple values for efficiency
-            values = [
-                '(' + ', '.join(
-                    f'"{r[col]}"' if isinstance(r[col], str) else str(r[col])
-                    for col in formatted_columns
-                ) + ')'
-            for r in batch
-            ]
+            values = []
+            for _, row in batch.iterrows():
+                row_values = []
+                for col in formatted_columns:
+                    val = row[col]
+                    if pd.isna(val):
+                        row_values.append("NULL")
+                    elif isinstance(val, str):
+                        # escape double quotes and single quotes
+                        safe_val = val.replace('"', '""').replace("'", "''")
+                        row_values.append(f"'{safe_val}'")
+                    else:
+                        row_values.append(str(val))
+                values.append(f"({', '.join(row_values)})")
 
-            SQL_STATEMENT = f'INSERT INTO `{schema_name}` ({", ".join(formatted_columns)}) VALUES {", ".join(values)}'
+            SQL_STATEMENT = f"""
+                INSERT INTO `{schema_name}` ({", ".join(formatted_columns)})
+                VALUES {", ".join(values)};
+            """
 
             payload = {
                 "type": "cmd",

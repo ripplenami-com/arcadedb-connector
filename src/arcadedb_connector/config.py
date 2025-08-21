@@ -62,9 +62,9 @@ class ArcadeDBConfig(BaseModel):
         
         required_vars = {
             "ARCADEDB_HOST": "localhost",
-            "ARCADEDB_DATABASE": "database",
-            "ARCADEDB_USERNAME": "username",
-            "ARCADEDB_PASSWORD": "password"
+            "ARCADEDB_NAME": "database",
+            "ARCADEDB_USER": "username",
+            "ARCADEDB_PASS": "password"
         }
         
         missing_vars = []

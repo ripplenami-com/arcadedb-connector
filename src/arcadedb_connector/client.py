@@ -653,6 +653,7 @@ class ArcadeDBClient:
         self.logger.info("Inserting %d records into schema %s", total_records, schema_name)
 
         formatted_columns = format_columns(columns)
+        print(formatted_columns)
 
         for i in range(0, total_records, BATCH_SIZE):
             batch = data.iloc[i:i + BATCH_SIZE]

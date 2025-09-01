@@ -624,7 +624,7 @@ class ArcadeDBClient:
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
-        
+        print(columns)
         self.logger.info("Inserting %d records into schema %s", len(data), table_name)
         self.insert_data(table_name, data, columns)
 
@@ -683,23 +683,16 @@ class ArcadeDBClient:
                 VALUES {", ".join(values)};
             """
 
-            print(SQL_STATEMENT)
-
             payload = {
                 "type": "cmd",
                 "language": "sql",
                 "command": SQL_STATEMENT,
                 "serializer": "record"
             }
-
-            print(json.dumps(payload, indent=2))
             
             try:
                 print("Sending payload...")
                 response = self._make_request('POST', f'command/{self.config.database}', payload)
-                print("Response received.")
-                print(response.status_code)
-                print(response.text)
                 if response.status_code == 200:
                     result = response.json()
                     if 'result' in result:
@@ -731,21 +724,14 @@ class ArcadeDBClient:
         try:
             response = self._make_request('POST', f'/begin/{self.config.database}')
             session_id = response.headers.get("arcadedb-session-id")
-            
-            print(response.status_code)
-            print(response.text)
-            print(response.headers)
-            print(session_id)
 
             if response.status_code != 204 or not session_id:
                 error_msg = "Failed to begin transaction: No session ID returned"
-                print(error_msg)
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)
             self.session.headers.update({
                 "arcadedb-session-id": session_id
             })
-            print(f"headers updated - {session_id}")
             self.logger.debug("Transaction started successfully")
 
         except Exception as e:
@@ -761,16 +747,14 @@ class ArcadeDBClient:
         Raises:
             ArcadeDBError: If transaction commit fails
         """
-        if not self._authenticated:
+        if not self._authenticated: 
             self.authenticate()
 
         try:
             response = self._make_request('POST', f'/commit/{self.config.database}')
-            print(response.status_code)
-            print(response.text)
             self.logger.debug("Transaction committed successfully")
+            print("Transaction committed successfully")
             return response.text
-            
         except Exception as e:
             error_msg = f"Failed to commit transaction: {str(e)}"
             self.logger.error(error_msg)
@@ -788,9 +772,8 @@ class ArcadeDBClient:
 
         try:
             response = self._make_request('POST', f'/rollback/{self.config.database}')
-            result = response.json()
             self.logger.debug("Transaction rolled back successfully")
-            return result
+            return response.text
             
         except Exception as e:
             error_msg = f"Failed to rollback transaction: {str(e)}"

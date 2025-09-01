@@ -703,6 +703,7 @@ class ArcadeDBClient:
                 if response.status_code == 200:
                     result = response.json()
                     if 'result' in result:
+                        print("Inserted Successfully")
                         self.logger.debug("Inserted %d records into schema %s successfully", len(batch), schema_name)
                     else:
                         self.logger.warning("No result returned for batch insert into schema %s", schema_name)
@@ -765,9 +766,10 @@ class ArcadeDBClient:
 
         try:
             response = self._make_request('POST', f'/commit/{self.config.database}')
-            result = response.json()
+            print(response.status_code)
+            print(response.text)
             self.logger.debug("Transaction committed successfully")
-            return result
+            return response.text
             
         except Exception as e:
             error_msg = f"Failed to commit transaction: {str(e)}"

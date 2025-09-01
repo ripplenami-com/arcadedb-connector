@@ -7,6 +7,7 @@ import logging
 import os
 import time
 from typing import Dict, Any, Optional, List, Union
+from urllib import response
 from urllib.parse import urljoin
 
 import requests
@@ -697,7 +698,8 @@ class ArcadeDBClient:
                 print("Sending payload...")
                 response = self._make_request('POST', f'command/{self.config.database}', payload)
                 print("Response received.")
-                print(json.dumps(response.json(), indent=2))
+                print(response.status_code)
+                print(response.text)
                 if response.status_code == 200:
                     result = response.json()
                     if 'result' in result:
@@ -728,7 +730,10 @@ class ArcadeDBClient:
         try:
             response = self._make_request('POST', f'/begin/{self.config.database}')
             session_id = response.headers.get("arcadedb-session-id")
-            print(json.dumps(response.json(), indent=2))
+            
+            print(response.status_code)
+            print(response.text)
+            print(response.headers)
             print(session_id)
 
             if response.status_code != 204 or not session_id:

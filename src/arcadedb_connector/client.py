@@ -692,6 +692,8 @@ class ArcadeDBClient:
                         self.logger.debug("Inserted %d records into schema %s successfully", len(batch), schema_name)
                     else:
                         self.logger.warning("No result returned for batch insert into schema %s", schema_name)
+                else:
+                    self.logger.error("Failed to insert records into schema %s: %s", schema_name, response.text)
             except Exception as e:
                 error_msg = f"Failed to insert records into schema {schema_name}: {str(e)}"
                 self.logger.error(error_msg)

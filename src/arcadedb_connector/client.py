@@ -616,6 +616,8 @@ class ArcadeDBClient:
         else:
             raise ArcadeDBError("Invalid columns format. Must be a JSON file or a list of dictionaries.")
         
+        print(columns)
+        
         # Create properties for each column
         for column in columns:
             field_name = column['name']

@@ -703,6 +703,7 @@ class ArcadeDBClient:
                 if response.status_code == 200:
                     result = response.json()
                     if 'result' in result:
+                        print("Inserted Successfully")
                         self.logger.debug("Inserted %d records into schema %s successfully", len(batch), schema_name)
                     else:
                         self.logger.warning("No result returned for batch insert into schema %s", schema_name)

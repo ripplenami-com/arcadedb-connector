@@ -605,6 +605,7 @@ class ArcadeDBClient:
         if isinstance(columns, str):
             json_file = read_file_content(columns)
             columns = json.loads(json_file)
+            print(columns)
         elif isinstance(columns, list):
             # check the first element of the list has a keys (name, type, index)
             if not all(key in columns[0] for key in ['name', 'type', 'index']):

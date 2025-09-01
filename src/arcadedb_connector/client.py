@@ -641,15 +641,20 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
+        print("Authenticated successfully.")
+
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
 
         self.begin_transaction()
+        print("Transaction started.")
         self.logger.debug("Transaction started")
 
         # total number of records to insert
         total_records = data.shape[0]
+        # remove the first row
+        data = data.iloc[1:]
         self.logger.info("Inserting %d records into schema %s", total_records, schema_name)
 
         formatted_columns = format_columns(columns)
@@ -677,15 +682,22 @@ class ArcadeDBClient:
                 VALUES {", ".join(values)};
             """
 
+            print(SQL_STATEMENT)
+
             payload = {
                 "type": "cmd",
                 "language": "sql",
                 "command": SQL_STATEMENT,
                 "serializer": "record"
             }
+
+            print(json.dumps(payload, indent=2))
             
             try:
+                print("Sending payload...")
                 response = self._make_request('POST', f'command/{self.config.database}', payload)
+                print("Response received.")
+                print(json.dumps(response.json(), indent=2))
                 if response.status_code == 200:
                     result = response.json()
                     if 'result' in result:
@@ -716,18 +728,23 @@ class ArcadeDBClient:
         try:
             response = self._make_request('POST', f'/begin/{self.config.database}')
             session_id = response.headers.get("arcadedb-session-id")
+            print(json.dumps(response.json(), indent=2))
+            print(session_id)
 
             if response.status_code != 204 or not session_id:
                 error_msg = "Failed to begin transaction: No session ID returned"
+                print(error_msg)
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)
             self.session.headers.update({
                 "arcadedb-session-id": session_id
             })
+            print(f"headers updated - {session_id}")
             self.logger.debug("Transaction started successfully")
 
         except Exception as e:
             error_msg = f"Failed to begin transaction: {str(e)}"
+            print(error_msg)
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
         

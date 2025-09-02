@@ -586,8 +586,6 @@ class ArcadeDBClient:
                 error_msg = f"Failed to read data from schema {schema_name}: {str(e)}"
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)
-
-        print(result)
             # drop the @rid, @type @cat  fields if it exists
         if '@rid' in result.columns:
             result = result.drop(columns=['@rid'])

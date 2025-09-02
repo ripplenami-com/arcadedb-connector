@@ -363,10 +363,11 @@ class ArcadeDBClient:
             "command": sql,
             "language": "sql"
         }
-
+        print(payload)
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()
+            print(result)
             print(result['result'])
             lastVersion = result.get('result', [{}])[0].get('lastversion', 0)
             return lastVersion, lastVersion > 0

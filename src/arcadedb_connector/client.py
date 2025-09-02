@@ -628,9 +628,11 @@ class ArcadeDBClient:
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
-        print(columns)
+        self.logger.debug("Updating versions for table %s", table_name)
+        self.save_version(table_name)
         self.logger.info("Inserting %d records into schema %s", len(data), table_name)
         self.insert_data(table_name, data, columns)
+        
 
     def insert_data(self, schema_name: str, data: pd.DataFrame, columns:list):
         """
@@ -695,7 +697,6 @@ class ArcadeDBClient:
             }
             
             try:
-                print("Sending payload...")
                 response = self._make_request('POST', f'command/{self.config.database}', payload)
                 if response.status_code == 200:
                     result = response.json()
@@ -893,7 +894,7 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
         
-    def save_version(self, classname, timestamp, version, bucket):
+    def save_version(self, table_name: str):
         """
         Saves the table name bucket and timestamp of the table in the versions table
         :params classname: name of the table to be stored in versions table.
@@ -905,6 +906,11 @@ class ArcadeDBClient:
         """
         if not self._authenticated:
             self.authenticate()
+        parsed = self._parse_table_name(table_name)
+        if not parsed:
+            self.logger.error("Failed to parse table name: %s", table_name)
+            return
+        classname, timestamp, version, bucket = parsed
 
         sql = 'INSERT INTO versions set  classname = "{}", timestamp = "{}", version = {}, bucket = "{}" '.format(
                 classname, timestamp, version, bucket
@@ -931,7 +937,14 @@ class ArcadeDBClient:
         if self.session:
             self.session.close()
             self.logger.info("ArcadeDB client session closed")
-    
+
+    def _parse_table_name(self, table_name: str):
+        parts = table_name.split("#")
+        if len(parts) != 3:
+            return None
+        current_timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        return parts[1], current_timestamp, parts[2], parts[0]
+
     def __enter__(self):
         """Context manager entry."""
         return self

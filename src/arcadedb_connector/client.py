@@ -478,9 +478,13 @@ class ArcadeDBClient:
             "language": "sql"
         }
 
+        print(payload)
+
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
+            print("Response received: ")
             result = response.json()
+            print(result)
             self.logger.debug("Property %s created successfully in schema %s", field_name, schema_name)
             return result
             
@@ -620,7 +624,7 @@ class ArcadeDBClient:
         
         # Create properties for each column
         for column in columns:
-            field_name = column['name']
+            field_name = column.get('name')
             field_type = column.get('type', 'STRING')
             self.create_property(table_name, field_name, field_type)
 

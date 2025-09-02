@@ -474,7 +474,7 @@ class ArcadeDBClient:
             self.authenticate()
 
         payload = {
-            "command": f"CREATE PROPERTY `{schema_name}`.`{field_name}` {field_type}",
+            "command": f"CREATE PROPERTY `{schema_name}`.`{field_name}` {field_type.upper()}",
             "language": "sql"
         }
 
@@ -601,7 +601,10 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        table_name = self.get_latest_table_name(schema_name)
+        bucket = None
+        if schema_name.find("#")>=0:
+            bucket = schema_name.split("#")[0]
+        table_name = self.get_latest_table_name(schema_name, bucket=bucket)
 
         if table_name is None:
             raise ArcadeDBError(f"Table {schema_name} does not exist in the database.")

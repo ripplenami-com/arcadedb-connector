@@ -381,13 +381,7 @@ class ArcadeDBClient:
         #name is in the form bucket # table # version
         if not self._authenticated:
             self.authenticate()
-        if bucket is not None:
-            lastVersion, lastVersionExists = self.get_next_version(name, bucket)
-            if lastVersionExists:
-                return f"{bucket}#{name}#{lastVersion + 1}"
-            else:
-                return f"{bucket}#{name}#1"
-        if name.find("#")>=0 and bucket is None:
+        if name.find("#")>=0 and bucket is not None:
             elements = name.split("#")
             if len(elements) ==3:
                 bucket = elements[0]

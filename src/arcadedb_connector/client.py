@@ -474,7 +474,7 @@ class ArcadeDBClient:
             self.authenticate()
 
         payload = {
-            "command": f"CREATE PROPERTY `{schema_name}`.`{field_name}` {field_type} IF NOT EXISTS",
+            "command": f"CREATE PROPERTY `{schema_name}`.`{field_name}` {field_type}",
             "language": "sql"
         }
 

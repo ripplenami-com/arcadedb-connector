@@ -335,7 +335,7 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
     
-    def get_next_version(self, classname, timestamp, bucket):
+    def get_next_version(self, classname, bucket):
         """
         get_next_version Based on the given parameters, detects if a new version is necessary. Reads the `versions` table,
         if a record for the classname with the specific timestam exist, it's not necessary to create a new version.
@@ -379,13 +379,19 @@ class ArcadeDBClient:
         #name is in the form bucket # table # version
         if not self._authenticated:
             self.authenticate()
-
-        if name.find("#")>=0:
+        if bucket is not None:
+            lastVersion, lastVersionExists = self.get_next_version(name, bucket)
+            if lastVersionExists:
+                return f"{bucket}#{name}#{lastVersion + 1}"
+            else:
+                return f"{bucket}#{name}#1"
+        if name.find("#")>=0 and bucket is None:
             elements = name.split("#")
             if len(elements) ==3:
                 bucket = elements[0]
                 name = elements[1]
-                # version= int(elements[2])
+                lastVersion, lastVersionExists = self.get_next_version(name, bucket)
+                return f"{bucket}#{name}#{lastVersion}" if lastVersionExists else f"{bucket}#{name}#1"
         else:
             return name
         
@@ -602,11 +608,7 @@ class ArcadeDBClient:
 
         self.create_schema(table_name)
 
-        if isinstance(columns, str):
-            json_file = read_file_content(columns)
-            columns = json.loads(json_file)
-            print(columns)
-        elif isinstance(columns, list):
+        if isinstance(columns, list):
             # check the first element of the list has a keys (name, type, index)
             if not all(key in columns[0] for key in ['name', 'type', 'index']):
                 raise ArcadeDBError("Invalid columns format. Each column must have 'name', 'type', and 'index' keys.")
@@ -615,8 +617,6 @@ class ArcadeDBClient:
         
         else:
             raise ArcadeDBError("Invalid columns format. Must be a JSON file or a list of dictionaries.")
-        
-        print(columns)
         
         # Create properties for each column
         for column in columns:

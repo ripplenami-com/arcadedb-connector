@@ -370,7 +370,7 @@ class ArcadeDBClient:
             print(result)
             print(result['result'])
             lastVersion = result.get('result', [{}])[0].get('lastversion', 0)
-            return lastVersion, lastVersion > 0
+            return lastVersion + 1, lastVersion > 0
 
         except Exception as e:
             error_msg = f"Failed to update counter: {str(e)}"
@@ -381,13 +381,11 @@ class ArcadeDBClient:
         #name is in the form bucket # table # version
         if not self._authenticated:
             self.authenticate()
-        if name.find("#")>=0 and bucket is not None:
+        if name.find("#")>=0:
             elements = name.split("#")
             if len(elements) ==3:
                 bucket = elements[0]
                 name = elements[1]
-                lastVersion, lastVersionExists = self.get_next_version(name, bucket)
-                return f"{bucket}#{name}#{lastVersion}" if lastVersionExists else f"{bucket}#{name}#1"
         else:
             return name
         
@@ -595,10 +593,12 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        bucket = None
+        table_name = schema_name
         if schema_name.find("#")>=0:
             bucket = schema_name.split("#")[0]
-        table_name = self.get_latest_table_name(schema_name, bucket=bucket)
+            name = schema_name.split("#")[1]
+            lastVersion, _ = self.get_next_version(name, bucket=bucket)
+            table_name = f"{bucket}#{name}#{lastVersion}"
 
         if table_name is None:
             raise ArcadeDBError(f"Table {schema_name} does not exist in the database.")

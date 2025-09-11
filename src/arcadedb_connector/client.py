@@ -178,6 +178,7 @@ class ArcadeDBClient:
         try:
             response = self._make_request('GET', 'ready', authenticate=False)
             self.logger.info("Successfully connected to ArcadeDB server")
+            self.authenticate()
             return True
         except Exception as e:
             self.logger.error("Failed to connect to ArcadeDB: %s", str(e))
@@ -658,7 +659,7 @@ class ArcadeDBClient:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
 
-        #self.begin_transaction()
+        self.begin_transaction()
         print("Transaction started.")
         self.logger.debug("Transaction started")
 
@@ -727,8 +728,8 @@ class ArcadeDBClient:
         Raises:
             ArcadeDBError: If transaction initiation fails
         """
-        #if not self._authenticated:
-        #    self.authenticate()
+        if not self._authenticated:
+           self.authenticate()
 
         try:
             response = self._make_request('POST', f'/begin/{self.config.database}')

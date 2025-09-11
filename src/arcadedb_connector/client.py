@@ -637,6 +637,7 @@ class ArcadeDBClient:
         self.save_version(table_name)
         self.logger.info("Inserting %d records into schema %s", len(data), table_name)
         self.insert_data(table_name, data, columns)
+        self.index_data(table_name, columns)
         
 
     def insert_data(self, schema_name: str, data: pd.DataFrame, columns:list):
@@ -718,6 +719,39 @@ class ArcadeDBClient:
                 self.rollback_transaction()
                 raise ArcadeDBError(error_msg)
 
+    def index_data(self, schema_name: str, columns: list):
+        """
+        Create indexes on specified columns in the schema.
+        
+        Args:
+            schema_name: Name of the schema
+            columns: List of column definitions
+            
+        Raises:
+            ArcadeDBError: If index creation fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        for column in columns:
+            if column.get('index', False):
+                field_name = column.get('name')
+                index_type = 'UNIQUE'
+                payload = {
+                    "command": f"CREATE INDEX ON `{schema_name}` ({field_name}) {index_type}",
+                    "language": "sql"
+                }
+                
+                try:
+                    response = self._make_request('POST', f'command/{self.config.database}', payload)
+                    result = response.json()
+                    self.logger.debug("Index %s created successfully on schema %s", field_name, schema_name)
+                    print("Index {} created successfully on schema {}".format(field_name, schema_name))
+                except Exception as e:
+                    error_msg = f"Failed to create index on {field_name} in schema {schema_name}: {str(e)}"
+                    self.logger.error(error_msg)
+                    raise ArcadeDBError(error_msg)
+                
     def begin_transaction(self):
         """
         Begin a transaction in ArcadeDB.

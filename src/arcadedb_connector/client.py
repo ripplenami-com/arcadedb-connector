@@ -727,8 +727,8 @@ class ArcadeDBClient:
         Raises:
             ArcadeDBError: If transaction initiation fails
         """
-        if not self._authenticated:
-            self.authenticate()
+        #if not self._authenticated:
+        #    self.authenticate()
 
         try:
             response = self._make_request('POST', f'/begin/{self.config.database}')

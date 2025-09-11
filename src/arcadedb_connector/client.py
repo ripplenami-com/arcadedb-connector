@@ -658,7 +658,7 @@ class ArcadeDBClient:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
 
-        self.begin_transaction()
+        #self.begin_transaction()
         print("Transaction started.")
         self.logger.debug("Transaction started")
 

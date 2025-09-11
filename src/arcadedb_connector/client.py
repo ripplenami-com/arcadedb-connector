@@ -600,6 +600,8 @@ class ArcadeDBClient:
             lastVersion, _ = self.get_next_version(name, bucket=bucket)
             table_name = f"{bucket}#{name}#{lastVersion}"
 
+        print("Table name to be used: ", table_name)
+
         if table_name is None:
             raise ArcadeDBError(f"Table {schema_name} does not exist in the database.")
         
@@ -608,6 +610,7 @@ class ArcadeDBClient:
             print("Table {} dropped to be recreated.".format(table_name))
 
         self.create_schema(table_name)
+        print("Schema {} created.".format(table_name))
 
         if isinstance(columns, list):
             # check the first element of the list has a keys (name, type, index)
@@ -629,6 +632,7 @@ class ArcadeDBClient:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
         self.logger.debug("Updating versions for table %s", table_name)
+        print("Updating versions for table {}".format(table_name))
         self.save_version(table_name)
         self.logger.info("Inserting %d records into schema %s", len(data), table_name)
         self.insert_data(table_name, data, columns)

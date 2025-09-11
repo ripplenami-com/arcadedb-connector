@@ -916,7 +916,7 @@ class ArcadeDBClient:
             return
         classname, timestamp, version, bucket = parsed
 
-        sql = 'INSERT INTO versions set  classname = "{}", timestamp = "{}", version = {}, bucket = "{}" '.format(
+        sql = 'INSERT INTO versions set  classname = "{}", timestamp = "{}", version = {}, `bucket` = "{}" '.format(
                 classname, timestamp, version, bucket
             )
 

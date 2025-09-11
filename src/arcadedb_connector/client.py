@@ -741,7 +741,6 @@ class ArcadeDBClient:
                     "command": f"CREATE INDEX ON `{schema_name}` ({field_name}) {index_type}",
                     "language": "sql"
                 }
-                
                 try:
                     response = self._make_request('POST', f'command/{self.config.database}', payload)
                     result = response.json()

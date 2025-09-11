@@ -925,6 +925,9 @@ class ArcadeDBClient:
             "language": "sql"
         }
 
+        print("Table name to be used: ", table_name)
+        print(payload)
+
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()

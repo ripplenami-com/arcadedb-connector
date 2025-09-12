@@ -540,6 +540,7 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
+        print("Executing query: ", query)
 
         skip = 0
         limit = PAGE_SIZE if PAGE_SIZE > 0 else numRows

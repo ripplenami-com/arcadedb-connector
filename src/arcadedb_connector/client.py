@@ -527,7 +527,7 @@ class ArcadeDBClient:
         else:
             fields = [f"`{field}`" for field in fields]
 
-        query = f"SELECT {', '.join(fields)} FROM {schema_name}"
+        query = f"SELECT {', '.join(fields)} FROM `{schema_name}`"
 
         if customer_type_id is not None:
             query += f" WHERE CustomerTypeId = {customer_type_id}"

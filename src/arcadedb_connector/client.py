@@ -382,12 +382,12 @@ class ArcadeDBClient:
         #name is in the form bucket # table # version
         if not self._authenticated:
             self.authenticate()
-        if name.find("#")>=0:
+        if name.find("#")>=0 and not bucket:
             elements = name.split("#")
             if len(elements) ==3:
                 bucket = elements[0]
                 name = elements[1]
-        else:
+        elif not bucket:
             return name
         
         

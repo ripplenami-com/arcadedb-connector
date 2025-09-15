@@ -863,6 +863,8 @@ class ArcadeDBClient:
             "language": "sql"
         }
 
+        print("Executing count query: ", limitQuery)
+
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()

@@ -561,12 +561,10 @@ class ArcadeDBClient:
                 if 'result' in data:
                     result.extend(data['result'])
                     if skip == 0:
-                        print("First page of results: ", data['result'])
                         # create a dataframe for the first records
                         result = pd.DataFrame(data['result'])
                         print("DataFrame created for first page of results:")
                     else:
-                        print("Subsequent page of results: ", data['result'])
                         # append to the existing dataframe
                         result = pd.concat([result, pd.DataFrame(data['result'])], ignore_index=True)
 

@@ -532,6 +532,7 @@ class ArcadeDBClient:
         result = pd.DataFrame()
         while skip < numRows:
             self.logger.debug("Fetching records %d to %d", skip, skip + limit)
+            print("Fetching records %d to %d", skip, skip + limit)
             payload['command'] = query
             if skip > 0:
                 payload['command'] += f" SKIP {skip}"

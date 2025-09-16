@@ -944,7 +944,6 @@ class ArcadeDBClient:
         """Close the client session."""
         if self.session:
             self.session.close()
-            self.logger.info("ArcadeDB client session closed")
 
     def _parse_table_name(self, table_name: str):
         parts = table_name.split("#")

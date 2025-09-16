@@ -529,7 +529,7 @@ class ArcadeDBClient:
         skip = 0
         limit = PAGE_SIZE if PAGE_SIZE > 0 else numRows
 
-        result = []
+        result = pd.DataFrame()
         while skip < numRows:
             payload['command'] = query
             if skip > 0:
@@ -542,19 +542,12 @@ class ArcadeDBClient:
             try:
                 response = self._make_request('POST', f'command/{self.config.database}', payload)
                 data = response.json()
-                if 'result' in data:
-                    result.extend(data['result'])
-                    if skip == 0:
-                        # create a dataframe for the first records
-                        result = pd.DataFrame(data['result'])
-                    else:
-                        # append to the existing dataframe
-                        result = pd.concat([result, pd.DataFrame(data['result'])], ignore_index=True)
-
+                if 'result' in data and data['result']:
+                    temp_df = pd.DataFrame(data['result'])
+                    result = pd.concat([result, temp_df], ignore_index=True)
                 else:
                     self.logger.warning("No results found for query: %s", payload['command'])
                     break
-                
                 skip += limit
                 if len(data['result']) < limit:
                     break

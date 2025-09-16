@@ -43,11 +43,6 @@ class ArcadeDBClient:
         self.logger = self._setup_logger()
         self.session = self._setup_session()
         self._authenticated = False
-        
-        self.logger.info(
-            "Initialized ArcadeDB client for %s:%s/%s",
-            config.host, config.port, config.database
-        )
         self.connect()
     
     def _setup_logger(self) -> logging.Logger:
@@ -177,7 +172,6 @@ class ArcadeDBClient:
         """
         try:
             response = self._make_request('GET', 'ready', authenticate=False)
-            self.logger.info("Successfully connected to ArcadeDB server")
             self.authenticate()
             return True
         except Exception as e:
@@ -197,7 +191,6 @@ class ArcadeDBClient:
         try:
             response = self._make_request('GET', f'/exists/{self.config.database}')
             self._authenticated = True
-            self.logger.info("Successfully authenticated with ArcadeDB")
             return True
         except ArcadeDBAuthenticationError:
             self._authenticated = False
@@ -245,7 +238,6 @@ class ArcadeDBClient:
             )
             
             result = response.json()
-            self.logger.debug("Query executed successfully")
             return result
             
         except Exception as e:
@@ -364,12 +356,9 @@ class ArcadeDBClient:
             "command": sql,
             "language": "sql"
         }
-        print(payload)
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()
-            print(result)
-            print(result['result'])
             lastVersion = result.get('result', [{}])[0].get('lastversion', 0)
             return lastVersion + 1, lastVersion > 0
 
@@ -473,13 +462,9 @@ class ArcadeDBClient:
             "language": "sql"
         }
 
-        print(payload)
-
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
-            print("Response received: ")
             result = response.json()
-            print(result)
             self.logger.debug("Property %s created successfully in schema %s", field_name, schema_name)
             return result
             
@@ -540,7 +525,6 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
-        print("Executing query: ", query)
 
         skip = 0
         limit = PAGE_SIZE if PAGE_SIZE > 0 else numRows
@@ -563,7 +547,6 @@ class ArcadeDBClient:
                     if skip == 0:
                         # create a dataframe for the first records
                         result = pd.DataFrame(data['result'])
-                        print("DataFrame created for first page of results:")
                     else:
                         # append to the existing dataframe
                         result = pd.concat([result, pd.DataFrame(data['result'])], ignore_index=True)
@@ -600,17 +583,13 @@ class ArcadeDBClient:
             lastVersion, _ = self.get_next_version(name, bucket=bucket)
             table_name = f"{bucket}#{name}#{lastVersion}"
 
-        print("Table name to be used: ", table_name)
-
         if table_name is None:
             raise ArcadeDBError(f"Table {schema_name} does not exist in the database.")
         
         if table_name.find("#") <= 0:
             self.drop_schema(table_name)
-            print("Table {} dropped to be recreated.".format(table_name))
 
         self.create_schema(table_name)
-        print("Schema {} created.".format(table_name))
 
         if isinstance(columns, list):
             # check the first element of the list has a keys (name, type, index)
@@ -632,7 +611,6 @@ class ArcadeDBClient:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
         self.logger.debug("Updating versions for table %s", table_name)
-        print("Updating versions for table {}".format(table_name))
         self.save_version(table_name)
         self.logger.info("Inserting %d records into schema %s", len(data), table_name)
         self.insert_data(table_name, data, columns)
@@ -653,14 +631,11 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        print("Authenticated successfully.")
-
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
 
         self.begin_transaction()
-        print("Transaction started.")
         self.logger.debug("Transaction started")
 
         # total number of records to insert
@@ -670,7 +645,6 @@ class ArcadeDBClient:
         self.logger.info("Inserting %d records into schema %s", total_records, schema_name)
 
         formatted_columns = format_columns(columns)
-        print(formatted_columns)
 
         for i in range(0, total_records, BATCH_SIZE):
             batch = data.iloc[i:i + BATCH_SIZE]
@@ -706,7 +680,6 @@ class ArcadeDBClient:
                 if response.status_code == 200:
                     result = response.json()
                     if 'result' in result:
-                        print("Inserted Successfully")
                         self.logger.debug("Inserted %d records into schema %s successfully", len(batch), schema_name)
                     else:
                         self.logger.warning("No result returned for batch insert into schema %s", schema_name)
@@ -744,7 +717,6 @@ class ArcadeDBClient:
                     response = self._make_request('POST', f'command/{self.config.database}', payload)
                     result = response.json()
                     self.logger.debug("Index %s created successfully on schema %s", field_name, schema_name)
-                    print("Index {} created successfully on schema {}".format(field_name, schema_name))
                 except Exception as e:
                     error_msg = f"Failed to create index on {field_name} in schema {schema_name}: {str(e)}"
                     self.logger.error(error_msg)
@@ -795,7 +767,6 @@ class ArcadeDBClient:
         try:
             response = self._make_request('POST', f'/commit/{self.config.database}')
             self.logger.debug("Transaction committed successfully")
-            print("Transaction committed successfully")
             return response.text
         except Exception as e:
             error_msg = f"Failed to commit transaction: {str(e)}"
@@ -860,8 +831,6 @@ class ArcadeDBClient:
             "command": limitQuery,
             "language": "sql"
         }
-
-        print("Executing count query: ", limitQuery)
 
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
@@ -959,9 +928,6 @@ class ArcadeDBClient:
             "command": sql,
             "language": "sql"
         }
-
-        print("Table name to be used: ", table_name)
-        print(payload)
 
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)

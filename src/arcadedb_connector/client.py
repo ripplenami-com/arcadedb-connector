@@ -525,12 +525,13 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
-
+        NEW_PAGE_SIZE = 10000
         skip = 0
-        limit = PAGE_SIZE if PAGE_SIZE > 0 else numRows
+        limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
 
         result = pd.DataFrame()
         while skip < numRows:
+            self.logger.debug("Fetching records %d to %d", skip, skip + limit)
             payload['command'] = query
             if skip > 0:
                 payload['command'] += f" SKIP {skip}"

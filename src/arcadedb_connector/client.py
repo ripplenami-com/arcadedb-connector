@@ -161,15 +161,6 @@ class ArcadeDBClient:
             raise ArcadeDBError(f"Request failed: {str(e)}")
     
     def connect(self) -> bool:
-        """
-        Test connection to ArcadeDB server.
-        
-        Returns:
-            True if connection successful
-            
-        Raises:
-            ArcadeDBError: If connection fails
-        """
         try:
             response = self._make_request('GET', 'ready', authenticate=False)
             self.authenticate()
@@ -179,15 +170,6 @@ class ArcadeDBClient:
             raise
     
     def authenticate(self) -> bool:
-        """
-        Authenticate with ArcadeDB server.
-        
-        Returns:
-            True if authentication successful
-            
-        Raises:
-            ArcadeDBAuthenticationError: If authentication fails
-        """
         try:
             response = self._make_request('GET', f'/exists/{self.config.database}')
             self._authenticated = True
@@ -569,6 +551,7 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
+        print("Creating schema %s if not exists", schema_name)
         self.create_schema(schema_name)
 
         if not columns:

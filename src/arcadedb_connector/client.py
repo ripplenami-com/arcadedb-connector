@@ -582,12 +582,7 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        table_name = schema_name
-        if schema_name.find("#")>=0:
-            bucket = schema_name.split("#")[0]
-            name = schema_name.split("#")[1]
-            lastVersion, _ = self.get_next_version(name, bucket=bucket)
-            table_name = f"{bucket}#{name}#{lastVersion}"
+        table_name = self.get_latest_schema_name(schema_name)
 
         if table_name is None:
             raise ArcadeDBError(f"Table {schema_name} does not exist in the database.")

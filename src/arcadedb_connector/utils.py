@@ -6,6 +6,7 @@ import re
 import os
 from typing import Dict, Any, List
 from datetime import datetime
+from constants import INDEX_COLUMNS
 
 
 def validate_rid(rid: str) -> bool:
@@ -157,3 +158,28 @@ def format_columns(columns: List[Dict[str, Any]]) -> List[str]:
             raise ValueError("Column definition must contain 'name' key")
     
     return formatted_columns
+
+def get_column_names_from_df(df) -> List[Dict[str, Any]]:
+    """
+    Extract and sanitize column names from a DataFrame.
+    
+    Args:
+        df: DataFrame object
+
+    Returns:
+        List of sanitized column names
+    """
+    if df.empty:
+        return []
+    
+    columns = df.columns.tolist()
+    new_columns = []
+
+    for i, col in enumerate(columns):
+        new_columns.append({
+                  "name": col,
+                  "type": str(df[col].dtype).upper(),
+                  "index": True if col in INDEX_COLUMNS else False
+        })
+
+    return new_columns

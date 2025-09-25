@@ -16,7 +16,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .config import ArcadeDBConfig
-from .utils import read_file_content, format_columns
+from .utils import read_file_content, format_columns, get_column_names_from_df
 from .constants import PAGE_SIZE, BATCH_SIZE
 from .exceptions import (
     ArcadeDBError,
@@ -587,6 +587,9 @@ class ArcadeDBClient:
             self.drop_schema(table_name)
 
         self.create_schema(table_name)
+
+        if not columns:
+            columns = get_column_names_from_df(data)
 
         if isinstance(columns, list):
             # check the first element of the list has a keys (name, type, index)

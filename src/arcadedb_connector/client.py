@@ -409,19 +409,6 @@ class ArcadeDBClient:
             raise ArcadeDBError(error_msg)
 
     def create_schema(self, schema_name, super_class="V"):
-        """
-        Create a new schema (class) in the database.
-        
-        Args:
-            schema_name: Name of the schema to create
-            super_class: Super class for the new schema (default is "V")
-            
-        Returns:
-            Result of the schema creation operation
-            
-        Raises:
-            ArcadeDBError: If schema creation fails
-        """
         if not self._authenticated:
             self.authenticate()
 
@@ -581,6 +568,7 @@ class ArcadeDBClient:
     def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None):
         if not self._authenticated:
             self.authenticate()
+
         self.create_schema(schema_name)
 
         if not columns:

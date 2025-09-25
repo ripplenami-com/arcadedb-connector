@@ -551,9 +551,6 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        print("Creating schema %s if not exists", schema_name)
-        self.create_schema(schema_name)
-
         if not columns:
             columns = get_column_names_from_df(data)
 
@@ -569,9 +566,7 @@ class ArcadeDBClient:
         
         # Create properties for each column
         for column in columns:
-            field_name = column.get('name')
-            field_type = column.get('type', 'STRING')
-            self.create_property(schema_name, field_name, field_type)
+            self.create_property(schema_name, column.get('name', 'Name'), column.get('type', 'STRING'))
 
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")

@@ -359,6 +359,7 @@ class ArcadeDBClient:
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()
+            print(result)
             lastVersion = result.get('result', [{}])[0].get('lastversion', 0)
             return lastVersion + 1, lastVersion > 0
 

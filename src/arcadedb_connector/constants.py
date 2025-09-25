@@ -1,4 +1,4 @@
 PAGE_SIZE = 1000
-BATCH_SIZE = 100
+BATCH_SIZE = 1000
 
 INDEX_COLUMNS = ['Uuid', 'Id', 'CustomerId', 'PropertyNo', 'PropertyId']

@@ -614,6 +614,7 @@ class ArcadeDBClient:
         self.save_version(table_name)
         self.logger.info("Inserting %d records into schema %s", len(data), table_name)
         self.insert_data(table_name, data, columns)
+        print("Inserted records into schema %s", table_name)
         return table_name
         #self.index_data(table_name, columns)
         

@@ -569,6 +569,15 @@ class ArcadeDBClient:
             result = result.drop(columns=['@cat'])
         return result
 
+    def get_latest_schema_name(self, schema_name: str) -> str:
+        table_name = schema_name
+        if schema_name.find("#")>=0:
+            bucket = schema_name.split("#")[0]
+            name = schema_name.split("#")[1]
+            lastVersion, _ = self.get_next_version(name, bucket=bucket)
+            table_name = f"{bucket}#{name}#{lastVersion}"
+        return table_name
+
     def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None):
         if not self._authenticated:
             self.authenticate()

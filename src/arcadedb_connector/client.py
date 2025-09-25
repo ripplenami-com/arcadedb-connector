@@ -614,7 +614,7 @@ class ArcadeDBClient:
         self.save_version(table_name)
         self.logger.info("Inserting %d records into schema %s", len(data), table_name)
         self.insert_data(table_name, data, columns)
-        self.index_data(table_name, columns)
+        #self.index_data(table_name, columns)
         
 
     def insert_data(self, schema_name: str, data: pd.DataFrame, columns:list):

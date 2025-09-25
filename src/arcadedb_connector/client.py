@@ -581,16 +581,7 @@ class ArcadeDBClient:
     def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None):
         if not self._authenticated:
             self.authenticate()
-
-        table_name = self.get_latest_schema_name(schema_name)
-
-        if table_name is None:
-            raise ArcadeDBError(f"Table {schema_name} does not exist in the database.")
-        
-        if table_name.find("#") <= 0:
-            self.drop_schema(table_name)
-
-        self.create_schema(table_name)
+        self.create_schema(schema_name)
 
         if not columns:
             columns = get_column_names_from_df(data)
@@ -609,17 +600,17 @@ class ArcadeDBClient:
         for column in columns:
             field_name = column.get('name')
             field_type = column.get('type', 'STRING')
-            self.create_property(table_name, field_name, field_type)
+            self.create_property(schema_name, field_name, field_type)
 
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
-        self.logger.debug("Updating versions for table %s", table_name)
-        self.save_version(table_name)
-        self.logger.info("Inserting %d records into schema %s", len(data), table_name)
-        self.insert_data(table_name, data, columns)
-        print("Inserted records into schema %s", table_name)
-        return table_name
+        self.logger.debug("Updating versions for table %s", schema_name)
+        self.save_version(schema_name)
+        self.logger.info("Inserting %d records into schema %s", len(data), schema_name)
+        self.insert_data(schema_name, data, columns)
+        print("Inserted records into schema %s", schema_name)
+        return schema_name
         #self.index_data(table_name, columns)
         
 

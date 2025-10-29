@@ -6,7 +6,7 @@ import re
 import os
 from typing import Dict, Any, List
 from datetime import datetime
-from constants import INDEX_COLUMNS
+from .constants import INDEX_COLUMNS
 
 
 def validate_rid(rid: str) -> bool:

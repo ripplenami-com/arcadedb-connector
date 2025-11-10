@@ -616,7 +616,7 @@ class ArcadeDBClient:
                 row_values = []
                 for col in formatted_columns:
                     val = row[col]
-                    if pd.isna(val):
+                    if val is None:
                         row_values.append("NULL")
                     elif isinstance(val, list):  # <-- NEW: handle list columns
                         # Convert Python list to ArcadeDB array literal

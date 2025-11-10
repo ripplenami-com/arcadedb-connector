@@ -434,6 +434,8 @@ class ArcadeDBClient:
             "language": "sql"
         }
 
+        print(payload["command"])
+
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()

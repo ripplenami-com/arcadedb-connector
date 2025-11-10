@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 
 import requests
 import pandas as pd
+import numpy as np
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -616,16 +617,22 @@ class ArcadeDBClient:
                 row_values = []
                 for col in formatted_columns:
                     val = row[col]
-                    if val is None:
+                    if val is None or (isinstance(val, float) and np.isnan(val)):
                         row_values.append("NULL")
-                    elif isinstance(val, list):  # <-- NEW: handle list columns
-                        # Convert Python list to ArcadeDB array literal
-                        array_literal = "[" + ",".join(f'"{v}"' for v in val) + "]"
+                    elif isinstance(val, list):
+                        escaped_items = []
+                        for v in val:
+                            s = str(v).replace('"', '\\"')
+                            escaped_items.append(f'"{s}"')
+                        array_literal = "[" + ",".join(escaped_items) + "]"
                         row_values.append(array_literal)
                     elif isinstance(val, str):
                         # escape double quotes and single quotes
                         safe_val = val.replace('"', '""').replace("'", "''")
                         row_values.append(f"'{safe_val}'")
+                    # --- Handle booleans ---
+                    elif isinstance(val, bool):
+                        row_values.append("true" if val else "false")
                     else:
                         row_values.append(str(val))
                 values.append(f"({', '.join(row_values)})")

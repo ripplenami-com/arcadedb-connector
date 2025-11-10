@@ -618,6 +618,10 @@ class ArcadeDBClient:
                     val = row[col]
                     if pd.isna(val):
                         row_values.append("NULL")
+                    elif isinstance(val, list):  # <-- NEW: handle list columns
+                        # Convert Python list to ArcadeDB array literal
+                        array_literal = "[" + ",".join(f'"{v}"' for v in val) + "]"
+                        row_values.append(array_literal)
                     elif isinstance(val, str):
                         # escape double quotes and single quotes
                         safe_val = val.replace('"', '""').replace("'", "''")

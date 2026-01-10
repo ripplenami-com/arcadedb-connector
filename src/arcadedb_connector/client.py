@@ -395,10 +395,16 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        payload = {
-            "command": f"CREATE DOCUMENT TYPE `{schema_name}` IF NOT EXISTS",
-            "language": "sql"
-        }
+        if "#" in schema_name:
+            payload = {
+                "command": f"CREATE DOCUMENT TYPE `{schema_name}` IF NOT EXISTS",
+                "language": "sql"
+            }
+        else:
+            payload = {
+                "command": f"CREATE DOCUMENT TYPE {schema_name} IF NOT EXISTS",
+                "language": "sql"
+            }
 
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
@@ -834,11 +840,16 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        payload = {
-            "command": f"DROP TYPE `{schema_name}` IF EXISTS",
-            "language": "sql"
-        }
-
+        if "#" in schema_name:
+            payload = {
+                "command": f"DROP TYPE `{schema_name}` IF EXISTS UNSAFE",
+                "language": "sql"
+            }
+        else:
+            payload = {
+                "command": f"DROP TYPE {schema_name} IF EXISTS UNSAFE",
+                "language": "sql"
+            }
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()

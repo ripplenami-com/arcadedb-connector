@@ -395,16 +395,11 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        if "#" in schema_name:
-            payload = {
-                "command": f"CREATE DOCUMENT TYPE `{schema_name}` IF NOT EXISTS",
-                "language": "sql"
-            }
-        else:
-            payload = {
-                "command": f"CREATE DOCUMENT TYPE {schema_name} IF NOT EXISTS",
-                "language": "sql"
-            }
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
+        payload = {
+            "command": f"CREATE DOCUMENT TYPE {schema_name} IF NOT EXISTS",
+            "language": "sql"
+        }
 
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
@@ -435,8 +430,9 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
         payload = {
-            "command": f"CREATE PROPERTY `{schema_name}`.`{field_name}` {field_type.upper()}",
+            "command": f"CREATE PROPERTY {schema_name}.`{field_name}` {field_type.upper()}",
             "language": "sql"
         }
 
@@ -492,7 +488,8 @@ class ArcadeDBClient:
         else:
             fields = [f"`{field}`" for field in fields]
 
-        query = f"SELECT {', '.join(fields)} FROM `{schema_name}`"
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
+        query = f"SELECT {', '.join(fields)} FROM {schema_name}"
 
         if customer_type_id is not None:
             query += f" WHERE CustomerTypeId = {customer_type_id}"
@@ -609,6 +606,8 @@ class ArcadeDBClient:
 
         self.begin_transaction()
         self.logger.debug("Transaction started")
+
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
 
         # total number of records to insert
         total_records = data.shape[0]
@@ -790,22 +789,24 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
+
         if customer_type_id == None:
             if is_not_null == None:
-                limitQuery = "SELECT COUNT(*) AS counting from `{}`".format(schema_name)
+                limitQuery = "SELECT COUNT(*) AS counting from {}".format(schema_name)
             else:
                 limitQuery = (
-                    "SELECT COUNT(*) AS counting from `{}` WHERE {} IS NOT NULL".format(
+                    "SELECT COUNT(*) AS counting from {} WHERE {} IS NOT NULL".format(
                         schema_name, is_not_null
                     )
                 )
         else:
             if is_not_null == None:
-                limitQuery = "SELECT COUNT(*) AS counting from `{}` where CustomerTypeId = {} ".format(
+                limitQuery = "SELECT COUNT(*) AS counting from {} where CustomerTypeId = {} ".format(
                     schema_name, customer_type_id
                 )
             else:
-                limitQuery = "SELECT COUNT(*) AS counting from `{}` where CustomerTypeId = {} and {} IS NOT NULL ".format(
+                limitQuery = "SELECT COUNT(*) AS counting from {} where CustomerTypeId = {} and {} IS NOT NULL ".format(
                     schema_name, customer_type_id, is_not_null
                 )
 
@@ -840,15 +841,11 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
-        if "#" in schema_name:
-            payload = {
-                "command": f"DROP TYPE `{schema_name}` IF EXISTS UNSAFE",
-                "language": "sql"
-            }
-        else:
-            payload = {
-                "command": f"DROP TYPE {schema_name} IF EXISTS UNSAFE",
-                "language": "sql"
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
+
+        payload = {
+            "command": f"DROP TYPE {schema_name} IF EXISTS UNSAFE",
+            "language": "sql"
             }
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
@@ -873,8 +870,10 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
+        schema_name = f"`{schema}`" if "#" in schema else schema
+
         payload = {
-            "command": f"UPDATE `{schema}` SET {field_name} = {value}",
+            "command": f"UPDATE {schema_name} SET {field_name} = {value}",
             "language": "sql"
         }
 

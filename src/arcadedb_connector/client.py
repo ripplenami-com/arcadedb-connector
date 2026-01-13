@@ -645,7 +645,7 @@ class ArcadeDBClient:
                 values.append(f"({', '.join(row_values)})")
 
             SQL_STATEMENT = f"""
-                INSERT INTO `{schema_name}` ({", ".join(formatted_columns)})
+                INSERT INTO {schema_name} ({", ".join(formatted_columns)})
                 VALUES {", ".join(values)};
             """
 

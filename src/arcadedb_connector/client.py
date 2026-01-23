@@ -455,7 +455,8 @@ class ArcadeDBClient:
         fields=None,
         customer_type_id=None,
         is_not_null=None,
-        versioning=True
+        versioning=True,
+        condition=None
     ):
         """
         read_data read a schema from ArcadeDB. The array of fields to read is received in
@@ -491,8 +492,13 @@ class ArcadeDBClient:
         schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
         query = f"SELECT {', '.join(fields)} FROM {schema_name}"
 
+        if condition is not None:
+            query += f" WHERE {condition}"
         if customer_type_id is not None:
-            query += f" WHERE CustomerTypeId = {customer_type_id}"
+            if condition is None:
+                query += f" WHERE CustomerTypeId = {customer_type_id}"
+            else:
+                query += f" AND CustomerTypeId = {customer_type_id}"
 
         if is_not_null is not None:
             query += f" AND {is_not_null} IS NOT NULL"
@@ -536,8 +542,8 @@ class ArcadeDBClient:
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)
             # drop the @rid, @type @cat  fields if it exists
-        if '@rid' in result.columns:
-            result = result.drop(columns=['@rid'])
+        #if '@rid' in result.columns:
+        #    result = result.drop(columns=['@rid'])
         if '@type' in result.columns:
             result = result.drop(columns=['@type'])
         if '@cat' in result.columns:

@@ -523,7 +523,7 @@ class ArcadeDBClient:
             payload['command'] = paged_query
 
             self.logger.debug("Query with pagination: %s", payload['command'])
-            print(payload['command'])
+            print("Number of results downloaded so far....: ", len(results))
 
             try:
                 response = self._make_request('POST', f'command/{self.config.database}', payload)

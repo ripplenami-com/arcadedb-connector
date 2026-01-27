@@ -516,7 +516,7 @@ class ArcadeDBClient:
         while True:
             paged_query = query
             if last_rid:
-                paged_query += f" AND @rid > '{last_rid}'"
+                paged_query += f" WHERE @rid > '{last_rid}'"
 
             paged_query += f" ORDER BY @rid LIMIT {limit}"
 

@@ -508,48 +508,52 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
-        NEW_PAGE_SIZE = 10000
-        skip = 0
+        NEW_PAGE_SIZE = 20000
         limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
 
-        result = pd.DataFrame()
-        while skip < numRows:
-            self.logger.debug("Fetching records %d to %d", skip, skip + limit)
-            print("Fetching records %d to %d", skip, skip + limit)
-            payload['command'] = query
-            if skip > 0:
-                payload['command'] += f" SKIP {skip}"
-            if limit > 0:
-                payload['command'] += f" LIMIT {limit}"
+        results = []
+        last_rid = None
+        while True:
+            paged_query = query
+            if last_rid:
+                paged_query += f" AND @rid > {last_rid}"
+
+            paged_query += f" ORDER BY @rid LIMIT {limit}"
+
+            payload['command'] = paged_query
 
             self.logger.debug("Query with pagination: %s", payload['command'])
 
             try:
                 response = self._make_request('POST', f'command/{self.config.database}', payload)
-                data = response.json()
-                if 'result' in data and data['result']:
-                    temp_df = pd.DataFrame(data['result'])
-                    result = pd.concat([result, temp_df], ignore_index=True)
-                else:
-                    self.logger.warning("No results found for query: %s", payload['command'])
+                data = response.json().get("result", [])
+                if not data:
                     break
-                skip += limit
-                if len(data['result']) < limit:
+
+                results.extend(data)
+                last_rid = data[-1]["@rid"]
+
+                if len(data) < limit:
                     break
 
             except Exception as e:
                 error_msg = f"Failed to read data from schema {schema_name}: {str(e)}"
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)
+            
+        if not results:
+            self.logger.warning("No records retrieved from schema %s", schema_name)
+            return pd.DataFrame()
+        
+        results = pd.DataFrame.from_records(results)
             # drop the @rid, @type @cat  fields if it exists
         #if '@rid' in result.columns:
         #    result = result.drop(columns=['@rid'])
-        if '@type' in result.columns:
-            result = result.drop(columns=['@type'])
-        if '@cat' in result.columns:
-            result = result.drop(columns=['@cat'])
-        return result
-
+        if '@type' in results.columns:
+            results = results.drop(columns=['@type'])
+        if '@cat' in results.columns:
+            results = results.drop(columns=['@cat'])
+        return results
     def get_latest_schema_name(self, schema_name: str) -> str:
         table_name = schema_name
         if schema_name.find("#")>=0:

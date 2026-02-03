@@ -623,9 +623,9 @@ class ArcadeDBClient:
         # total number of records to insert
         total_records = data.shape[0]
 
-        columns = data.columns.tolist()
+        columns_arr = data.columns.tolist()
         batch_size = BATCH_SIZE
-        if len(columns) < 10:
+        if len(columns_arr) < 10:
             batch_size = 1000
         # remove the first row
         data = data.iloc[1:]

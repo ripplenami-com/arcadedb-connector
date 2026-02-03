@@ -622,14 +622,19 @@ class ArcadeDBClient:
 
         # total number of records to insert
         total_records = data.shape[0]
+
+        columns = data.columns.tolist()
+        batch_size = BATCH_SIZE
+        if len(columns) < 10:
+            batch_size = 1000
         # remove the first row
         data = data.iloc[1:]
         self.logger.info("Inserting %d records into schema %s", total_records, schema_name)
 
         formatted_columns = format_columns(columns)
 
-        for i in range(0, total_records, BATCH_SIZE):
-            batch = data.iloc[i:i + BATCH_SIZE]
+        for i in range(0, total_records, batch_size):
+            batch = data.iloc[i:i + batch_size]
             values = []
             for _, row in batch.iterrows():
                 row_values = []

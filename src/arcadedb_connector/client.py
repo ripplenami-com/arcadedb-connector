@@ -449,7 +449,7 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)   
     
-    def read_incremental_data(self, schema_name, last_rid=None, versioning=True):
+    def read_incremental_data(self, schema_name, last_rid=None, versioning=True, count=0):
         if not self._authenticated:
             self.authenticate()
 
@@ -500,7 +500,7 @@ class ArcadeDBClient:
                 results = results.drop(columns=['@cat'])
             if '@rid' in results.columns:
                 results = results.drop(columns=['@rid'])
-            print("Number of results downloaded so far....: ", results.shape[0])
+            print("Number of results downloaded so far....: ", (results.shape[0] * count))
             return results, last_rid
         except Exception as e:
             error_msg = f"Failed to read data from schema {schema_name}: {str(e)}"

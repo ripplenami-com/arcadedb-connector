@@ -471,7 +471,7 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
-        NEW_PAGE_SIZE = 20000
+        NEW_PAGE_SIZE = 10000
         limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
 
         paged_query = query

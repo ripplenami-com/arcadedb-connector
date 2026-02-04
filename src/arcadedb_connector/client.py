@@ -448,7 +448,68 @@ class ArcadeDBClient:
             error_msg = f"Failed to create property {field_name} in schema {schema_name}: {str(e)}"
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)   
-   
+    
+    def read_incremental_data(self, schema_name, last_rid=None, versioning=True):
+        if not self._authenticated:
+            self.authenticate()
+
+        if versioning:
+            schema_name = self.get_latest_table_name(schema_name)
+
+        numRows = self.count_values_schema(schema_name)
+        self.logger.debug("numRows =  {} ".format(numRows))
+
+        if numRows == 0:
+            self.logger.warning("No records found in schema %s", schema_name)
+            return []
+        
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
+        query = f"SELECT * FROM {schema_name}"
+
+        payload = {
+            "command": query,
+            "language": "sql"
+        }
+        self.logger.debug("Executing query: %s", query)
+        NEW_PAGE_SIZE = 20000
+        limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
+
+        paged_query = query
+        if last_rid:
+            paged_query += f" WHERE @rid > '{last_rid}'"
+
+        paged_query += f" ORDER BY @rid LIMIT {limit}"
+
+        payload['command'] = paged_query
+
+        results = []
+
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            data = response.json().get("result", [])
+            if not data:
+                return pd.DataFrame(), last_rid
+            last_rid = data[-1]["@rid"]
+
+            if len(data) < limit:
+                return pd.DataFrame(), last_rid
+            # convert to dataframe
+            results = pd.DataFrame.from_records(results)
+
+            if '@type' in results.columns:
+                results = results.drop(columns=['@type'])
+            if '@cat' in results.columns:
+                results = results.drop(columns=['@cat'])
+            if '@rid' in results.columns:
+                results = results.drop(columns=['@rid'])
+            print("Number of results downloaded so far....: ", results.shape[0])
+            return results, last_rid
+        except Exception as e:
+            error_msg = f"Failed to read data from schema {schema_name}: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+
+
     def read_data(
         self,
         schema_name,

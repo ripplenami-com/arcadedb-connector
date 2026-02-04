@@ -471,7 +471,7 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
-        NEW_PAGE_SIZE = 10000
+        NEW_PAGE_SIZE = 20000
         limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
 
         paged_query = query
@@ -498,8 +498,6 @@ class ArcadeDBClient:
                 results = results.drop(columns=['@type'])
             if '@cat' in results.columns:
                 results = results.drop(columns=['@cat'])
-            if '@rid' in results.columns:
-                results = results.drop(columns=['@rid'])
             print("Number of results downloaded so far....: ", (results.shape[0] * count))
             return results, last_rid
         except Exception as e:

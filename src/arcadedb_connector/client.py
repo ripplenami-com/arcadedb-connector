@@ -489,8 +489,8 @@ class ArcadeDBClient:
                 return pd.DataFrame(), last_rid
             last_rid = data[-1]["@rid"]
 
-            if len(data) < limit:
-                return pd.DataFrame(), last_rid
+            #if len(data) < limit:
+            #    return pd.DataFrame(), last_rid
             # convert to dataframe
             results = pd.DataFrame.from_records(data)
 

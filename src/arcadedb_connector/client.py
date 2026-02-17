@@ -681,21 +681,28 @@ class ArcadeDBClient:
 
         schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
 
-        # total number of records to insert
-        total_records = data.shape[0]
-
         columns_arr = data.columns.tolist()
+
+        # remove the first row
+        data = data.iloc[1:]
+
+        # total number of records to insert
+        total_records = len(data)
+
         batch_size = BATCH_SIZE
         if len(columns_arr) < 10:
             batch_size = 1000
-        # remove the first row
-        data = data.iloc[1:]
+
         self.logger.info("Inserting %d records into schema %s", total_records, schema_name)
 
         formatted_columns = format_columns(columns)
 
         for i in range(0, total_records, batch_size):
             batch = data.iloc[i:i + batch_size]
+
+            if batch.empty:
+                continue
+            
             values = []
             for _, row in batch.iterrows():
                 row_values = []

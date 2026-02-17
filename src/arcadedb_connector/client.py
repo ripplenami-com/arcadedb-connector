@@ -571,7 +571,12 @@ class ArcadeDBClient:
         NEW_PAGE_SIZE = 20000
         limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
 
-        results = []
+        results_1 = []
+        results_2 = []
+        results_3 = []
+        results_4 = []
+        results_5 = []
+        results_6 = []
         last_rid = None
         while True:
             paged_query = query
@@ -583,15 +588,26 @@ class ArcadeDBClient:
             payload['command'] = paged_query
 
             self.logger.debug("Query with pagination: %s", payload['command'])
-            print("Number of results downloaded so far....: ", len(results))
+            print("Number of results downloaded so far....: ", len(results_1) + len(results_2) + len(results_3) + len(results_4) + len(results_5) + len(results_6))
 
             try:
                 response = self._make_request('POST', f'command/{self.config.database}', payload)
                 data = response.json().get("result", [])
                 if not data:
                     break
-
-                results.extend(data)
+                
+                if len(results_1) < 1000000:
+                    results_1.extend(data)
+                elif len(results_2) < 1000000:
+                    results_2.extend(data)
+                elif len(results_3) < 1000000:
+                    results_3.extend(data)
+                elif len(results_4) < 1000000:
+                    results_4.extend(data)
+                elif len(results_5) < 1000000:
+                    results_5.extend(data)
+                else:
+                    results_6.extend(data)
                 last_rid = data[-1]["@rid"]
 
                 if len(data) < limit:
@@ -602,9 +618,11 @@ class ArcadeDBClient:
                 self.logger.error(error_msg)
                 raise ArcadeDBError(error_msg)
             
-        if not results:
+        if not results_1 and not results_2 and not results_3 and not results_4 and not results_5 and not results_6:
             self.logger.warning("No records retrieved from schema %s", schema_name)
             return pd.DataFrame()
+        
+        results = results_1 + results_2 + results_3 + results_4 + results_5 + results_6
         
         results = pd.DataFrame.from_records(results)
             # drop the @rid, @type @cat  fields if it exists

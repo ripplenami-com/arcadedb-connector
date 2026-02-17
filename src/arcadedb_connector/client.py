@@ -684,7 +684,7 @@ class ArcadeDBClient:
         columns_arr = data.columns.tolist()
 
         # remove the first row
-        data = data.iloc[1:]
+        #data = data.iloc[1:]
 
         # total number of records to insert
         total_records = len(data)
@@ -702,7 +702,7 @@ class ArcadeDBClient:
 
             if batch.empty:
                 continue
-            
+
             values = []
             for _, row in batch.iterrows():
                 row_values = []

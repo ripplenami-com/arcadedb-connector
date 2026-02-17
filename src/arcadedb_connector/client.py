@@ -449,7 +449,7 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)   
     
-    def read_incremental_data(self, schema_name, last_rid=None, versioning=True, count=0):
+    def read_incremental_data(self, schema_name, columns=None, last_rid=None, versioning=True, count=0):
         if not self._authenticated:
             self.authenticate()
 
@@ -464,7 +464,10 @@ class ArcadeDBClient:
             return []
         
         schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
-        query = f"SELECT * FROM {schema_name}"
+        if columns is None:
+            query = f"SELECT @rid, * FROM {schema_name}"
+        else:
+            query = f"SELECT @rid, {', '.join(columns)} FROM {schema_name}"
 
         payload = {
             "command": query,
@@ -472,7 +475,7 @@ class ArcadeDBClient:
         }
         self.logger.debug("Executing query: %s", query)
         NEW_PAGE_SIZE = 20000
-        limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
+        limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE < numRows else numRows
 
         paged_query = query
         if last_rid:

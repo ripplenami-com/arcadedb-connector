@@ -550,7 +550,7 @@ class ArcadeDBClient:
             fields = [f"`{field}`" for field in fields]
 
         schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
-        query = f"SELECT {', '.join(fields)} FROM {schema_name}"
+        query = f"SELECT @rid, {', '.join(fields)} FROM {schema_name}"
 
         if condition is not None:
             query += f" WHERE {condition}"

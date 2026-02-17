@@ -516,7 +516,8 @@ class ArcadeDBClient:
         customer_type_id=None,
         is_not_null=None,
         versioning=True,
-        condition=None
+        condition=None,
+        page_size=20000
     ):
         """
         read_data read a schema from ArcadeDB. The array of fields to read is received in
@@ -568,8 +569,7 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
-        NEW_PAGE_SIZE = 20000
-        limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE > 0 else numRows
+        limit = page_size if page_size > 0 else numRows
 
         results = []
         last_rid = None

@@ -607,6 +607,7 @@ class ArcadeDBClient:
             return pd.DataFrame()
         
         results = pd.DataFrame.from_records(results)
+        results.columns = results.columns.str.replace('`', '', regex=False)
             # drop the @rid, @type @cat  fields if it exists
         #if '@rid' in result.columns:
         #    result = result.drop(columns=['@rid'])

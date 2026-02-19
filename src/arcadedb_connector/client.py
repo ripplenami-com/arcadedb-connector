@@ -449,7 +449,7 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)   
     
-    def read_incremental_data(self, schema_name, columns=None, last_rid=None, versioning=True, count=0):
+    def read_incremental_data(self, schema_name, columns=None, last_rid=None, versioning=True, page_size=20000):
         if not self._authenticated:
             self.authenticate()
 
@@ -474,8 +474,8 @@ class ArcadeDBClient:
             "language": "sql"
         }
         self.logger.debug("Executing query: %s", query)
-        NEW_PAGE_SIZE = 20000
-        limit = NEW_PAGE_SIZE if NEW_PAGE_SIZE < numRows else numRows
+        
+        limit = page_size if page_size > 0 else numRows
 
         paged_query = query
         if last_rid:
@@ -501,7 +501,7 @@ class ArcadeDBClient:
                 results = results.drop(columns=['@type'])
             if '@cat' in results.columns:
                 results = results.drop(columns=['@cat'])
-            print("Number of results downloaded so far....: ", (results.shape[0] * count))
+            print("Number of results downloaded so far....: ", (results.shape[0]))
             return results, last_rid
         except Exception as e:
             error_msg = f"Failed to read data from schema {schema_name}: {str(e)}"

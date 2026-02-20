@@ -625,7 +625,7 @@ class ArcadeDBClient:
             table_name = f"{bucket}#{name}#{lastVersion}"
         return table_name
 
-    def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None):
+    def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None, index_column=None):
         if not self._authenticated:
             self.authenticate()
 
@@ -645,6 +645,9 @@ class ArcadeDBClient:
         # Create properties for each column
         for column in columns:
             self.create_property(schema_name, column.get('name', 'Name'), column.get('type', 'STRING'))
+
+        if index_column and index_column in [col['name'] for col in columns]:
+            self.index_data(schema_name, [{'name': index_column, 'index': True}])
 
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")

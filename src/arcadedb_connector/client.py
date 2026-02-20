@@ -759,6 +759,37 @@ class ArcadeDBClient:
                 self.rollback_transaction()
                 raise ArcadeDBError(error_msg)
 
+    def create_index(self, schema_name: str, field_name: str, index_type: str = "UNIQUE"):
+        """
+        Create an index on a specified field in the schema.
+        
+        Args:
+            schema_name: Name of the schema
+            field_name: Name of the field to index
+            index_type: Type of the index (default is "UNIQUE")
+            
+        Raises:
+            ArcadeDBError: If index creation fails
+        """
+        if not self._authenticated:
+            self.authenticate()
+
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
+        payload = {
+            "command": f"CREATE INDEX ON `{schema_name}` (`{field_name}`) {index_type}",
+            "language": "sql"
+        }
+        try:
+            response = self._make_request('POST', f'command/{self.config.database}', payload)
+            result = response.json()
+            self.logger.debug("Index on %s created successfully in schema %s", field_name, schema_name)
+            return result
+            
+        except Exception as e:
+            error_msg = f"Failed to create index on {field_name} in schema {schema_name}: {str(e)}"
+            self.logger.error(error_msg)
+            raise ArcadeDBError(error_msg)
+
     def index_data(self, schema_name: str, columns: list):
         """
         Create indexes on specified columns in the schema.

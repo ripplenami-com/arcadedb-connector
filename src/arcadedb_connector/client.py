@@ -784,7 +784,7 @@ class ArcadeDBClient:
                 try:
                     response = self._make_request('POST', f'command/{self.config.database}', payload)
                     result = response.json()
-                    self.logger.debug("Index %s created successfully on schema %s", field_name, schema_name)
+                    self.logger.info("Index %s created successfully on schema %s", field_name, schema_name)
                 except Exception as e:
                     error_msg = f"Failed to create index on {field_name} in schema {schema_name}: {str(e)}"
                     self.logger.error(error_msg)

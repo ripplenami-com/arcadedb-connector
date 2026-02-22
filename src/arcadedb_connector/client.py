@@ -625,7 +625,7 @@ class ArcadeDBClient:
             table_name = f"{bucket}#{name}#{lastVersion}"
         return table_name
 
-    def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None, index_column=None, index_type="UNIQUE"):
+    def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None, index_columns=None):
         if not self._authenticated:
             self.authenticate()
 
@@ -646,19 +646,18 @@ class ArcadeDBClient:
         for column in columns:
             self.create_property(schema_name, column.get('name', 'Name'), column.get('type', 'STRING'))
 
-        if index_column:
-            self.create_index(schema_name, index_column, index_type=index_type)
-
         if data.empty:
             self.logger.warning("DataFrame is empty. No records to insert.")
             return
+        
         self.logger.debug("Updating versions for table %s", schema_name)
         self.save_version(schema_name)
         self.logger.info("Inserting %d records into schema %s", len(data), schema_name)
+        if index_columns:
+            self.index_data(schema_name, index_columns)
         self.insert_data(schema_name, data, columns)
         print("Inserted records into schema %s", schema_name)
         return schema_name
-        #self.index_data(table_name, columns)
         
 
     def insert_data(self, schema_name: str, data: pd.DataFrame, columns:list):
@@ -790,7 +789,7 @@ class ArcadeDBClient:
             self.logger.error(error_msg)
             raise ArcadeDBError(error_msg)
 
-    def index_data(self, schema_name: str, columns: list):
+    def index_data(self, schema_name: str, columns: Optional[List[Dict[str, Any]]] = None):
         """
         Create indexes on specified columns in the schema.
         
@@ -804,22 +803,27 @@ class ArcadeDBClient:
         if not self._authenticated:
             self.authenticate()
 
+        schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
+
+        if columns is None:
+            self.logger.info("No columns specified for indexing in schema %s", schema_name)
+            return
+        
         for column in columns:
-            if column.get('index', False):
-                field_name = column.get('name')
-                index_type = 'UNIQUE'
-                payload = {
-                    "command": f"CREATE INDEX ON `{schema_name}` ({field_name}) {index_type}",
-                    "language": "sql"
-                }
-                try:
-                    response = self._make_request('POST', f'command/{self.config.database}', payload)
-                    result = response.json()
-                    self.logger.info("Index %s created successfully on schema %s", field_name, schema_name)
-                except Exception as e:
-                    error_msg = f"Failed to create index on {field_name} in schema {schema_name}: {str(e)}"
-                    self.logger.error(error_msg)
-                    raise ArcadeDBError(error_msg)
+            field_name = column.get('name')
+            index_type = column.get('index_type', 'UNIQUE').upper()
+            payload = {
+                "command": f"CREATE INDEX ON {schema_name} (`{field_name}`) {index_type}",
+                "language": "sql"
+            }
+            try:
+                response = self._make_request('POST', f'command/{self.config.database}', payload)
+                result = response.json()
+                self.logger.info("Index %s created successfully on schema %s", field_name, schema_name)
+            except Exception as e:
+                error_msg = f"Failed to create index on {field_name} in schema {schema_name}: {str(e)}"
+                self.logger.error(error_msg)
+                raise ArcadeDBError(error_msg)
                 
     def begin_transaction(self):
         """

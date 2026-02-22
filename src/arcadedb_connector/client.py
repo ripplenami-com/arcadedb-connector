@@ -811,7 +811,7 @@ class ArcadeDBClient:
         
         for column in columns:
             field_name = column.get('name')
-            index_type = column.get('index_type', 'UNIQUE').upper()
+            index_type = column.get('type', 'UNIQUE').upper()
             payload = {
                 "command": f"CREATE INDEX ON {schema_name} (`{field_name}`) {index_type}",
                 "language": "sql"

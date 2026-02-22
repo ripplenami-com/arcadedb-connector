@@ -776,10 +776,9 @@ class ArcadeDBClient:
 
         schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
         payload = {
-            "command": f"CREATE INDEX ON `{schema_name}` (`{field_name}`) {index_type}",
+            "command": f"CREATE INDEX ON {schema_name} (`{field_name}`) {index_type}",
             "language": "sql"
         }
-        print(payload["command"])
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()

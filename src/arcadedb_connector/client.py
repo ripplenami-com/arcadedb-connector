@@ -625,7 +625,7 @@ class ArcadeDBClient:
             table_name = f"{bucket}#{name}#{lastVersion}"
         return table_name
 
-    def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None, index_column=None, index_type=None):
+    def insert_dataframe(self, schema_name: str, data: pd.DataFrame, columns=None, index_column=None, index_type="UNIQUE"):
         if not self._authenticated:
             self.authenticate()
 
@@ -646,7 +646,7 @@ class ArcadeDBClient:
         for column in columns:
             self.create_property(schema_name, column.get('name', 'Name'), column.get('type', 'STRING'))
 
-        if index_column and index_type:
+        if index_column:
             self.create_index(schema_name, index_column, index_type=index_type)
 
         if data.empty:
@@ -779,6 +779,7 @@ class ArcadeDBClient:
             "command": f"CREATE INDEX ON `{schema_name}` (`{field_name}`) {index_type}",
             "language": "sql"
         }
+        print(payload["command"])
         try:
             response = self._make_request('POST', f'command/{self.config.database}', payload)
             result = response.json()

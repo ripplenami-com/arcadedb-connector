@@ -456,12 +456,12 @@ class ArcadeDBClient:
         if versioning:
             schema_name = self.get_latest_table_name(schema_name)
 
-        numRows = self.count_values_schema(schema_name)
-        self.logger.debug("numRows =  {} ".format(numRows))
+        #numRows = self.count_values_schema(schema_name)
+        #self.logger.debug("numRows =  {} ".format(numRows))
 
-        if numRows == 0:
-            self.logger.warning("No records found in schema %s", schema_name)
-            return []
+        #if numRows == 0:
+        #    self.logger.warning("No records found in schema %s", schema_name)
+        #    return []
         
         schema_name = f"`{schema_name}`" if "#" in schema_name else schema_name
         if columns is None:
@@ -475,7 +475,7 @@ class ArcadeDBClient:
         }
         self.logger.debug("Executing query: %s", query)
         
-        limit = page_size if page_size > 0 else numRows
+        limit = page_size if page_size > 0 else 10000
 
         paged_query = query
         if last_rid:

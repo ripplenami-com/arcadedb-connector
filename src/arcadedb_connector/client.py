@@ -692,8 +692,8 @@ class ArcadeDBClient:
         total_records = len(data)
 
         batch_size = BATCH_SIZE
-        if len(columns_arr) < 10:
-            batch_size = 1000
+        if len(columns_arr) <= 25:
+            batch_size = 500
 
         self.logger.info("Inserting %d records into schema %s", total_records, schema_name)
 

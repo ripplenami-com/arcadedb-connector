@@ -721,7 +721,7 @@ class ArcadeDBClient:
                         row_values.append(array_literal)
                     elif isinstance(val, str):
                         # escape double quotes and single quotes
-                        safe_val = val.replace('"', '""').replace("'", "''")
+                        safe_val = val.replace("\\", "\\\\").replace("'", "\\'")
                         row_values.append(f"'{safe_val}'")
                     # --- Handle booleans ---
                     elif isinstance(val, bool):
